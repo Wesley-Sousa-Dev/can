@@ -1,26 +1,113 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  Tokens do manual de identidade visual (ver AGENTS.md).
+  Cada grupo começa com "initial" para apagar a paleta, a escala de texto,
+  os pesos e as sombras padrão do Tailwind. Assim, só os valores do manual
+  geram utilities e ninguém usa "bg-violet-600" ou "text-2xl" por engano.
+*/
+@theme {
+  /* Cores */
+  --color-*: initial;
+  --color-primary-focus: #a78bfa;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #5b21b6;
+  --color-tag: #06b6d4;
+  --color-destructive: #ef4444;
+  --color-cta: #10b981;
+  --color-placeholder: #94a3b8;
+  --color-border: #334155;
+  --color-border-input: #64748b;
+  --color-card: #1e293b;
+  --color-background: #0f172a;
+  --color-panel: #131b2e;
+  --color-background-base: #090d16;
+  --color-disabled: #64748b;
+  --color-subtitle: #94a3b8;
+  --color-title: #f8fafc;
+  --color-on-accent: #090d16;
+  --color-error-text: #f87171;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Tamanhos: de x-large para cima usam Rajdhani 600 e entrelinha 1,2;
+     de large para baixo usam Roboto e entrelinha 1,5 (critério AAA 1.4.8). */
+  --text-*: initial;
+  --text-xxxx-large: 3rem;
+  --text-xxxx-large--line-height: 1.2;
+  --text-xxxx-large--font-weight: 600;
+  --text-xxx-large: 2.5rem;
+  --text-xxx-large--line-height: 1.2;
+  --text-xxx-large--font-weight: 600;
+  --text-xx-large: 2rem;
+  --text-xx-large--line-height: 1.2;
+  --text-xx-large--font-weight: 600;
+  --text-x-large: 1.5rem;
+  --text-x-large--line-height: 1.2;
+  --text-x-large--font-weight: 600;
+  --text-large: 1.25rem;
+  --text-large--line-height: 1.5;
+  --text-medium: 1rem;
+  --text-medium--line-height: 1.5;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Pesos aprovados: Roboto 400 e 500, Rajdhani 600. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Sombras */
+  --shadow-*: initial;
+  --shadow-soft: 0 2px 2px rgb(0 0 0 / 15%);
+  --shadow-medium: 0 4px 8px rgb(0 0 0 / 15%);
+  --shadow-strong: 0 8px 16px rgb(0 0 0 / 20%);
+
+  /* Animação de entrada dos slides do carrossel */
+  --animate-fade-in: fade-in 300ms ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* As fontes vêm do next/font (layout.tsx), que declara --font-rajdhani e --font-roboto. */
+@theme inline {
+  --font-display: var(--font-rajdhani), sans-serif;
+  --font-sans: var(--font-roboto), sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-background-base);
+  }
+
+  /* Indicador de foco único para todo o site: 2px na cor de foco do manual,
+     com contraste acima de 5:1 em todos os fundos. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Respeita quem pediu ao sistema para reduzir animações. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

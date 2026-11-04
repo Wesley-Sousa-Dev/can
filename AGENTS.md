@@ -27,7 +27,14 @@ A família da fonte depende do tamanho do texto:
 
 As famílias usam os tokens `--font-display` (Rajdhani) e `--font-sans` (Roboto).
 
-O manual não define pesos de fonte nem altura de linha. Confirme com quem pediu a tarefa antes de fixar um padrão.
+O manual não define pesos de fonte nem altura de linha. Os valores abaixo foram decididos pelo projeto em 03/11/2026:
+
+| Faixa                    | Peso                                                | Altura de linha |
+| ------------------------ | --------------------------------------------------- | --------------- |
+| `xxxx-large` a `x-large` | Rajdhani 600 (`font-semibold`)                      | 1,2             |
+| `large` a `small`        | Roboto 400 (`font-normal`) e 500 (`font-medium`)    | 1,5             |
+
+Use o peso 500 do Roboto em botões, preços e destaques. A altura de linha 1,5 no corpo atende o critério AAA 1.4.8 da WCAG. Os pesos e as alturas já estão embutidos nos tokens `--text-*`, então `text-x-large` aplica 600 e 1,2 automaticamente.
 
 ### Cores
 
@@ -52,6 +59,21 @@ O manual não define pesos de fonte nem altura de linha. Confirme com quem pediu
 
 Placeholders e Subtítulo têm o mesmo hex, mas são papéis diferentes: use o token do papel, não o da cor.
 
+#### Cores de acessibilidade
+
+Três combinações do manual não passavam no nível AA da WCAG. Os tokens abaixo foram aprovados em 03/11/2026 para corrigi-las. Eles vêm das mesmas escalas de cor do manual.
+
+| Uso                                         | Hex       | Token                  | Contraste                          |
+| ------------------------------------------- | --------- | ---------------------- | ---------------------------------- |
+| Texto sobre fundos de CTA, destrutivo e tag | `#090D16` | `--color-on-accent`    | CTA 7,66 · destrutivo 5,16 · tag 8 |
+| Texto de mensagens de erro                  | `#F87171` | `--color-error-text`   | mínimo de 5,29 (sobre card)        |
+| Borda de campos de formulário               | `#64748B` | `--color-border-input` | mínimo de 3,07 (sobre card)        |
+
+- Nunca use texto claro sobre `--color-cta` ou `--color-destructive`: o contraste fica abaixo de 4,5.
+- `--color-destructive` continua valendo para a borda e o ícone de um campo com erro, que precisam só de 3:1.
+- `--color-border` fica para divisórias decorativas. Campos de formulário usam `--color-border-input`.
+- Links e indicadores de foco usam `--color-primary-focus`. O `--color-primary` não tem contraste suficiente para texto sobre o fundo escuro.
+
 ### Sombras
 
 | Nome   | Valores do manual | Token             | CSS                           |
@@ -62,6 +84,19 @@ Placeholders e Subtítulo têm o mesmo hex, mas são papéis diferentes: use o t
 
 O manual traz os quatro números sem rótulos. A coluna CSS os lê como blur, X, Y e opacidade, em preto. Essa leitura é uma interpretação e ainda precisa ser confirmada com o design.
 
+### Marca
+
+| Arquivo                            | Uso                                                        |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `design/brand/logo.jpeg`           | Original da logo (fundo branco). Não é servido pelo site.  |
+| `design/brand/icon.png`            | Original do ícone. Não é servido pelo site.                |
+| `src/assets/brand/can-emblem.png`  | Emblema recortado em círculo, usado pelo componente `Logo` |
+| `src/app/icon.png`                 | Favicon (convenção de arquivo do Next)                     |
+| `src/app/apple-icon.png`           | Ícone da tela inicial do iPhone, sobre `#0F172A`           |
+
+- Use sempre o componente `Logo` no cabeçalho e no rodapé. Ele mostra o emblema com o nome "Can" em texto ao lado, por isso a imagem tem `alt=""`.
+- Não use os originais direto na interface. A `logo.jpeg` tem fundo branco, e no `icon.png` as linhas brancas da lata são transparentes: sobre o fundo escuro, a lata desaparece. Os arquivos recortados já corrigem as duas coisas.
+
 ### Aplicação no código
 
 - O Tailwind v4 é configurado no CSS. Os tokens ficam em `@theme`, em `src/app/globals.css`, com os nomes da coluna "Token" das tabelas acima. Cada token gera as utilities correspondentes: `bg-primary`, `text-title`, `border-border`, `text-x-large`, `font-display`, `shadow-soft`.
@@ -69,3 +104,25 @@ O manual traz os quatro números sem rótulos. A coluna CSS os lê como blur, X,
 - Se um token ainda não existir no `globals.css`, declare-o lá com o valor deste manual antes de usá-lo.
 - Carregue Rajdhani e Roboto com `next/font/google` em `src/app/layout.tsx` e exponha-as ao Tailwind como `--font-display` e `--font-sans`.
 - Tamanho e família andam juntos: todo texto de `x-large` para cima leva `font-display`, e o restante fica em `font-sans`.
+- O `globals.css` zera a paleta, a escala de texto, os pesos e as sombras padrão do Tailwind (`--color-*: initial` e equivalentes). Uma classe como `bg-violet-600` simplesmente não gera CSS.
+
+## Convenções de código
+
+- Código sempre em inglês: variáveis, funções, componentes, arquivos e rotas.
+- Comentários sempre em português.
+- Nomes autoexplicativos (clean code): `getSpecialOffers`, `isCurrentPage`, `formatPriceInCents`. Evite abreviações como `g`, `idx` ou `data2`.
+- Comentários explicam o porquê, não o quê.
+
+## Arquitetura
+
+O código segue as três camadas vistas na Aula 3:
+
+| Camada       | Pasta                                         | Papel                                          |
+| ------------ | --------------------------------------------- | ---------------------------------------------- |
+| Apresentação | `src/app/`, `src/components/`                 | Telas e componentes React                      |
+| Negócio      | `src/services/`, `src/lib/`                   | Regras: filtros, ordenação, preços, datas      |
+| Dados        | `src/data/` (mock), depois a API REST         | Origem dos dados                               |
+
+Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/services/`. Quando a API ficar pronta, só a função `fetchAllGames` (e as equivalentes que surgirem) troca o mock por requisições HTTP.
+
+As capas em `public/games/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.
