@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AccountLink } from "@/components/layout/AccountLink";
 import { CartLink } from "@/components/layout/CartLink";
 import { Logo } from "@/components/layout/Logo";
 import { MobileMenu } from "@/components/layout/MobileMenu";
@@ -20,12 +21,7 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-2">
           <CartLink />
-          <Link
-            href="/login"
-            className="hidden min-h-11 items-center rounded-md bg-primary px-4 text-medium font-medium text-title transition-colors hover:bg-primary-hover md:flex"
-          >
-            Entrar
-          </Link>
+          <AccountLink className="hidden md:flex" />
           <MobileMenu />
         </div>
       </div>

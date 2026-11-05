@@ -1,9 +1,9 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 
+import { AccountLink } from "@/components/layout/AccountLink";
 import { PrimaryNavigation } from "@/components/layout/PrimaryNavigation";
 
 const MENU_PANEL_ID = "mobile-menu";
@@ -63,13 +63,7 @@ export function MobileMenu() {
         className="absolute inset-x-0 top-full z-40 border-b border-border bg-panel px-4 pb-4 pt-2 shadow-strong"
       >
         <PrimaryNavigation layout="vertical" onNavigate={closeMenu} />
-        <Link
-          href="/login"
-          onClick={closeMenu}
-          className="mt-3 flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-medium font-medium text-title transition-colors hover:bg-primary-hover"
-        >
-          Entrar
-        </Link>
+        <AccountLink onNavigate={closeMenu} className="mt-3 flex" />
       </div>
     </div>
   );

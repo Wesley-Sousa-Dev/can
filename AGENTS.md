@@ -132,7 +132,25 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | `cartCollection.add` / `.remove`          | `localStorage` (`can:cart`)  | `POST` / `DELETE` no carrinho      |
 | `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
 | `libraryCollection.add` / `.remove`       | `localStorage` (`can:library`) | `POST` / `DELETE` na biblioteca  |
+| `registerAccount` (`authService.ts`)      | `localStorage` (`can:accounts`) | `POST /users`                    |
+| `signIn` / `signOut` (`authService.ts`)   | `localStorage` (`can:session`) | `POST` / `DELETE /sessions`      |
+| `updateProfile` (`authService.ts`)        | `localStorage` (`can:accounts`) | `PATCH /users/:id`               |
+| `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
 
-O formato que a API deve devolver está em `src/types/game.ts`: `Game` para listas e `GameDetails` para a página de um jogo.
+O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas e `GameDetails` para a página de um jogo) e em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`).
 
-As capas em `public/games/` e as capturas de tela em `public/games/screenshots/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.
+As funções de conta esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
+
+## Formulários
+
+Todo formulário segue o mesmo padrão. Reaproveite os componentes de `src/components/forms/` e o hook `useValidatedForm`:
+
+- Rótulo visível acima do campo, nunca só o placeholder. O placeholder traz um exemplo (`Ex.: maria_gamer`).
+- Campos obrigatórios com `required` e asterisco visual, e um aviso no topo explicando o asterisco.
+- `autocomplete` correto em todo dado pessoal (`name`, `username`, `bday`, `street-address`, `email`, `new-password`, `current-password`), como pede a WCAG 1.3.5.
+- O formulário usa `noValidate`, e as regras ficam em `src/lib/accountValidation.ts`. As mensagens dizem como corrigir, não só que há erro.
+- Ao enviar com erro, o foco vai para o `ErrorSummary` no topo, e cada item leva ao campo. Cada campo com erro recebe `aria-invalid` e a mensagem por `aria-describedby`.
+- Erros que só o servidor descobre, como apelido repetido, voltam para o campo certo com `setFieldError`.
+- Confirmações aparecem em uma região `role="status"` que fica sempre no HTML, mesmo vazia.
+
+As capas em `public/games/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.

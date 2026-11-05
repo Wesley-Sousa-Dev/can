@@ -26,6 +26,10 @@ function compareByNewestRelease(firstGame: Game, secondGame: Game): number {
   return secondGame.releaseDate.localeCompare(firstGame.releaseDate);
 }
 
+export async function getAllGames(): Promise<Game[]> {
+  return fetchAllGames();
+}
+
 export async function getFeaturedGames(): Promise<Game[]> {
   const games = await fetchAllGames();
   return games.filter((game) => game.isFeatured);

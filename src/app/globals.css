@@ -65,11 +65,73 @@
   /* Animação de entrada dos slides do carrossel */
   --animate-fade-in: fade-in 300ms ease-out;
 
+  /* Animações da arte das latas-foguete (entrar e criar conta) */
+  --animate-can-bob: can-bob 4s ease-in-out infinite;
+  --animate-can-tumble: can-tumble 14s linear infinite;
+  --animate-soda-spray: soda-spray 1.6s ease-out infinite;
+  --animate-bubble-rise: bubble-rise 7s linear infinite;
+  --animate-twinkle: twinkle 3s ease-in-out infinite;
+
   @keyframes fade-in {
     from {
       opacity: 0;
     }
     to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes can-bob {
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate(0, -12px) rotate(4deg);
+    }
+  }
+
+  @keyframes can-tumble {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Cada gota define o destino em --spray-x e --spray-y. */
+  @keyframes soda-spray {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--spray-x), var(--spray-y)) scale(0.3);
+      opacity: 0;
+    }
+  }
+
+  @keyframes bubble-rise {
+    0% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(-220px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
       opacity: 1;
     }
   }

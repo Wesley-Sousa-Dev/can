@@ -8,6 +8,7 @@ export interface StoredIdList {
   getServerSnapshot: () => readonly string[];
   add: (id: string) => void;
   remove: (id: string) => void;
+  clear: () => void;
 }
 
 const EMPTY_LIST: readonly string[] = Object.freeze([]);
@@ -85,6 +86,9 @@ export function createStoredIdList(storageKey: string): StoredIdList {
     },
     remove(id) {
       save(getSnapshot().filter((storedId) => storedId !== id));
+    },
+    clear() {
+      save(EMPTY_LIST);
     },
   };
 }
