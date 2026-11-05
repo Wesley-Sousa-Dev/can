@@ -12,3 +12,12 @@ export function formatConjunctionList(items: string[]): string {
 export function formatGameCount(count: number): string {
   return count === 1 ? "1 jogo" : `${count} jogos`;
 }
+
+/** Ignora maiúsculas e acentos, para "orbita" encontrar "Órbita Zero" nas buscas. */
+export function normalizeForSearch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}

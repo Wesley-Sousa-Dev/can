@@ -1,4 +1,4 @@
-import type { GameCollectionEntry } from "@/types/collection";
+import type { GameCollectionEntry, GameCollectionEntryChanges } from "@/types/collection";
 
 // Coleção de jogos guardada no localStorage do navegador, no formato que o
 // useSyncExternalStore do React espera (subscribe + getSnapshot).
@@ -14,6 +14,7 @@ export interface StoredGameCollection {
   remove: (gameId: string) => void;
   /** Leva o jogo para a posição que targetGameId ocupa agora. */
   move: (gameId: string, targetGameId: string) => void;
+  update: (gameId: string, changes: GameCollectionEntryChanges) => void;
   clear: () => void;
 }
 
@@ -26,7 +27,8 @@ function isCollectionEntry(value: unknown): value is GameCollectionEntry {
     "gameId" in value &&
     typeof value.gameId === "string" &&
     "addedAt" in value &&
-    typeof value.addedAt === "string"
+    typeof value.addedAt === "string" &&
+    (!("lastPlayedAt" in value) || typeof value.lastPlayedAt === "string")
   );
 }
 
@@ -124,6 +126,9 @@ export function createStoredGameCollection(storageKey: string): StoredGameCollec
       const reorderedEntries = currentEntries.filter((entry) => entry.gameId !== gameId);
       reorderedEntries.splice(targetIndex, 0, movedEntry);
       save(reorderedEntries);
+    },
+    update(gameId, changes) {
+      save(getSnapshot().map((entry) => (entry.gameId === gameId ? { ...entry, ...changes } : entry)));
     },
     clear() {
       save(EMPTY_COLLECTION);

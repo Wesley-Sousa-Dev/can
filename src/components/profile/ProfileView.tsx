@@ -116,12 +116,14 @@ export function ProfileView({ games, isNewAccount }: ProfileViewProps) {
         title="Biblioteca"
         games={findGames(library.gameIds)}
         emptyMessage="Sua biblioteca está vazia. Jogos gratuitos e compras aparecem aqui."
+        fullListLink={{ href: "/library", label: "Abrir a biblioteca" }}
       />
       <GameShelf
         headingId="wishlist-heading"
         title="Lista de desejos"
         games={findGames(wishlist.gameIds)}
         emptyMessage="Nenhum jogo na lista de desejos ainda. Use o botão de coração na página de um jogo."
+        fullListLink={{ href: "/wishlist", label: "Abrir a lista de desejos" }}
       />
       <AccountDetails user={user} />
       <DeleteAccountSection userId={user.id} nickname={user.nickname} />

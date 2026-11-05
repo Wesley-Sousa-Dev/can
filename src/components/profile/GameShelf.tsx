@@ -10,12 +10,24 @@ interface GameShelfProps {
   title: string;
   games: Game[];
   emptyMessage: string;
+  /** Página com a coleção completa, como a biblioteca ou a lista de desejos. */
+  fullListLink?: { href: string; label: string };
 }
 
-export function GameShelf({ headingId, title, games, emptyMessage }: GameShelfProps) {
+export function GameShelf({ headingId, title, games, emptyMessage, fullListLink }: GameShelfProps) {
   return (
     <section aria-labelledby={headingId}>
-      <SectionHeader headingId={headingId} title={title} description={formatGameCount(games.length)} />
+      <div className="flex flex-wrap items-start justify-between gap-x-4">
+        <SectionHeader headingId={headingId} title={title} description={formatGameCount(games.length)} />
+        {fullListLink && games.length > 0 && (
+          <Link
+            href={fullListLink.href}
+            className="inline-flex min-h-11 items-center text-medium font-medium text-primary-focus underline underline-offset-4 hover:text-title"
+          >
+            {fullListLink.label}
+          </Link>
+        )}
+      </div>
       {games.length === 0 ? (
         // Estado vazio com um próximo passo, em vez de uma área em branco.
         <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6">

@@ -42,3 +42,24 @@ const localShortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
 export function formatShortLocalDate(isoDateTime: string): string {
   return localShortDateFormatter.format(new Date(isoDateTime));
 }
+
+const relativeDayFormatter = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
+const DAYS_SHOWN_AS_RELATIVE = 7;
+const MILLISECONDS_PER_DAY = 86_400_000;
+
+// Compara dias do calendário, e não blocos de 24 horas: algo de ontem às 23h
+// continua sendo "ontem" hoje à 1h da manhã.
+function getStartOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/** "hoje", "ontem" ou "há 3 dias" na última semana; antes disso, "4 de nov. de 2026". Só no navegador. */
+export function formatRelativeLocalDate(isoDateTime: string, now: Date = new Date()): string {
+  const daysAgo = Math.round(
+    (getStartOfLocalDay(now) - getStartOfLocalDay(new Date(isoDateTime))) / MILLISECONDS_PER_DAY,
+  );
+  if (daysAgo >= 0 && daysAgo < DAYS_SHOWN_AS_RELATIVE) {
+    return relativeDayFormatter.format(-daysAgo, "day");
+  }
+  return formatShortLocalDate(isoDateTime);
+}

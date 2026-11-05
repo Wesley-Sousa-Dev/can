@@ -78,10 +78,10 @@ export function PurchaseConfirmation({ order, games, nickname }: PurchaseConfirm
 
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/profile"
+            href="/library"
             className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-medium font-medium text-title transition-colors hover:bg-primary-hover"
           >
-            Ver biblioteca no perfil
+            Ir para a biblioteca
           </Link>
           <Link
             href="/"

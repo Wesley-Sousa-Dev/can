@@ -134,13 +134,14 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
 | `wishlistCollection.move`                 | `localStorage` (`can:wishlist`) | `PATCH` na lista de desejos (posição) |
 | `libraryCollection.add` / `.remove`       | `localStorage` (`can:library`) | `POST` / `DELETE` na biblioteca  |
+| `launchGame` (`libraryService.ts`)        | `localStorage` (`can:library`) | `PATCH /library/:gameId` (`lastPlayedAt`) |
 | `registerAccount` (`authService.ts`)      | `localStorage` (`can:accounts`) | `POST /users`                    |
 | `signIn` / `signOut` (`authService.ts`)   | `localStorage` (`can:session`) | `POST` / `DELETE /sessions`      |
 | `updateProfile` (`authService.ts`)        | `localStorage` (`can:accounts`) | `PATCH /users/:id`               |
 | `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
 | `placeOrder` (`checkoutService.ts`)       | `localStorage` (biblioteca, desejos e carrinho) | `POST /orders`   |
 
-O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo e a data em que entrou na coleção) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
+O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo, a data em que entrou na coleção e, na biblioteca, a última vez que foi aberto) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
 
 As funções de conta e de pedido esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`, em `src/services/simulatedNetwork.ts`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
 

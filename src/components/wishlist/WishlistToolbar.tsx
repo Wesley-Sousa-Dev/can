@@ -1,14 +1,15 @@
 "use client";
 
-import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useRef, useState, type RefObject } from "react";
 
+import { SearchField } from "@/components/forms/SearchField";
+import { SelectField } from "@/components/forms/SelectField";
 import {
   countActiveFilters,
   DEFAULT_WISHLIST_FILTERS,
   PRICE_LIMIT_OPTIONS,
   WISHLIST_SORT_OPTIONS,
-  type PriceLimit,
   type WishlistFilters,
   type WishlistSortOrder,
 } from "@/lib/wishlist";
@@ -23,20 +24,7 @@ interface WishlistToolbarProps {
 
 const FILTERS_PANEL_ID = "wishlist-filters";
 
-const FIELD_LABEL_CLASS = "text-small text-subtitle";
-
-const SELECT_CLASS =
-  "min-h-11 w-full appearance-none rounded-md border border-border-input bg-card pl-3 pr-10 text-medium text-title";
-
 const CHECKBOX_LABEL_CLASS = "flex min-h-11 cursor-pointer items-center gap-3 text-medium text-title";
-
-function isSortOrder(value: string): value is WishlistSortOrder {
-  return WISHLIST_SORT_OPTIONS.some((option) => option.value === value);
-}
-
-function isPriceLimit(value: string): value is PriceLimit {
-  return PRICE_LIMIT_OPTIONS.some((option) => option.value === value);
-}
 
 // Barra da lista de desejos, como a da Steam: busca, filtros e ordenação.
 // Tudo é aplicado na hora, sem botão de enviar.
@@ -76,28 +64,15 @@ export function WishlistToolbar({
       className="flex flex-col gap-3"
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-end">
-        <div className="flex flex-1 flex-col gap-1">
-          <label htmlFor="wishlist-search" className={FIELD_LABEL_CLASS}>
-            Buscar na lista
-          </label>
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-placeholder"
-            />
-            <input
-              ref={searchInputRef}
-              id="wishlist-search"
-              type="search"
-              value={filters.searchTerm}
-              onChange={(event) => updateFilters({ searchTerm: event.target.value })}
-              placeholder="Nome, marcador ou gênero"
-              autoComplete="off"
-              spellCheck={false}
-              className="min-h-11 w-full rounded-md border border-border-input bg-background pr-3 pl-10 text-medium text-title placeholder:text-placeholder"
-            />
-          </div>
-        </div>
+        <SearchField
+          ref={searchInputRef}
+          id="wishlist-search"
+          label="Buscar na lista"
+          value={filters.searchTerm}
+          placeholder="Nome, marcador ou gênero"
+          onChange={(searchTerm) => updateFilters({ searchTerm })}
+          className="flex-1"
+        />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <button
@@ -121,33 +96,14 @@ export function WishlistToolbar({
             />
           </button>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:w-64 sm:flex-none">
-            <label htmlFor="wishlist-sort" className={FIELD_LABEL_CLASS}>
-              Ordenar por
-            </label>
-            <div className="relative">
-              <select
-                id="wishlist-sort"
-                value={sortOrder}
-                onChange={(event) => {
-                  if (isSortOrder(event.target.value)) {
-                    onSortOrderChange(event.target.value);
-                  }
-                }}
-                className={SELECT_CLASS}
-              >
-                {WISHLIST_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-subtitle"
-              />
-            </div>
-          </div>
+          <SelectField
+            id="wishlist-sort"
+            label="Ordenar por"
+            value={sortOrder}
+            options={WISHLIST_SORT_OPTIONS}
+            onChange={onSortOrderChange}
+            className="flex-1 sm:w-64 sm:flex-none"
+          />
         </div>
       </div>
 
@@ -155,7 +111,7 @@ export function WishlistToolbar({
       <div id={FILTERS_PANEL_ID} hidden={!areFiltersOpen} className="rounded-lg bg-panel p-4 shadow-soft">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-8">
           <fieldset>
-            <legend className={FIELD_LABEL_CLASS}>Mostrar só</legend>
+            <legend className="text-small text-subtitle">Mostrar só</legend>
             <label className={CHECKBOX_LABEL_CLASS}>
               <input
                 ref={firstFilterRef}
@@ -177,33 +133,14 @@ export function WishlistToolbar({
             </label>
           </fieldset>
 
-          <div className="flex flex-col gap-1 sm:w-56">
-            <label htmlFor="wishlist-price-limit" className={FIELD_LABEL_CLASS}>
-              Preço máximo
-            </label>
-            <div className="relative">
-              <select
-                id="wishlist-price-limit"
-                value={filters.priceLimit}
-                onChange={(event) => {
-                  if (isPriceLimit(event.target.value)) {
-                    updateFilters({ priceLimit: event.target.value });
-                  }
-                }}
-                className={SELECT_CLASS}
-              >
-                {PRICE_LIMIT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-subtitle"
-              />
-            </div>
-          </div>
+          <SelectField
+            id="wishlist-price-limit"
+            label="Preço máximo"
+            value={filters.priceLimit}
+            options={PRICE_LIMIT_OPTIONS}
+            onChange={(priceLimit) => updateFilters({ priceLimit })}
+            className="sm:w-56"
+          />
 
           {activeFilterCount > 0 && (
             <button

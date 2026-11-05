@@ -1,5 +1,6 @@
 import { isGameReleased } from "@/lib/gameAvailability";
 import { calculateDiscountedPriceInCents, formatPriceInCents } from "@/lib/pricing";
+import { normalizeForSearch } from "@/lib/text";
 import type { GameCollectionEntry } from "@/types/collection";
 import type { GameListing } from "@/types/game";
 
@@ -78,15 +79,6 @@ export function buildWishlistItems(
     }
   }
   return items;
-}
-
-// Ignora maiúsculas e acentos: "orbita" encontra "Órbita Zero".
-function normalizeForSearch(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .trim();
 }
 
 // A busca olha o nome, os marcadores e os gêneros, como a da Steam.
