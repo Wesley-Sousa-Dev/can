@@ -94,6 +94,11 @@
     outline-offset: 2px;
   }
 
+  /* Com um modal aberto, a página do fundo não rola. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     html {
       scroll-behavior: smooth;

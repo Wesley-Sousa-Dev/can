@@ -119,10 +119,20 @@ O código segue as três camadas vistas na Aula 3:
 
 | Camada       | Pasta                                         | Papel                                          |
 | ------------ | --------------------------------------------- | ---------------------------------------------- |
-| Apresentação | `src/app/`, `src/components/`                 | Telas e componentes React                      |
+| Apresentação | `src/app/`, `src/components/`, `src/hooks/`   | Telas, componentes e hooks React               |
 | Negócio      | `src/services/`, `src/lib/`                   | Regras: filtros, ordenação, preços, datas      |
 | Dados        | `src/data/` (mock), depois a API REST         | Origem dos dados                               |
 
-Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/services/`. Quando a API ficar pronta, só a função `fetchAllGames` (e as equivalentes que surgirem) troca o mock por requisições HTTP.
+Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/services/`. Quando a API ficar pronta, estas são as funções que trocam o mock por requisições HTTP:
 
-As capas em `public/games/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.
+| Função ou objeto                          | Hoje                         | Com a API                          |
+| ----------------------------------------- | ---------------------------- | ---------------------------------- |
+| `fetchAllGames` (`gameService.ts`)        | `src/data/games.ts`          | `GET /games`                       |
+| `getGameBySlug` (`gameService.ts`)        | `src/data/gameDetails.ts`    | `GET /games/:slug`                 |
+| `cartCollection.add` / `.remove`          | `localStorage` (`can:cart`)  | `POST` / `DELETE` no carrinho      |
+| `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
+| `libraryCollection.add` / `.remove`       | `localStorage` (`can:library`) | `POST` / `DELETE` na biblioteca  |
+
+O formato que a API deve devolver está em `src/types/game.ts`: `Game` para listas e `GameDetails` para a página de um jogo.
+
+As capas em `public/games/` e as capturas de tela em `public/games/screenshots/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.
