@@ -129,15 +129,17 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | ----------------------------------------- | ---------------------------- | ---------------------------------- |
 | `fetchAllGames` (`gameService.ts`)        | `src/data/games.ts`          | `GET /games`                       |
 | `getGameBySlug` (`gameService.ts`)        | `src/data/gameDetails.ts`    | `GET /games/:slug`                 |
+| `getGameListings` (`gameService.ts`)      | `games.ts` + `gameDetails.ts` | `GET /games` com `tags` e `reviewSummary` |
 | `cartCollection.add` / `.remove`          | `localStorage` (`can:cart`)  | `POST` / `DELETE` no carrinho      |
 | `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
+| `wishlistCollection.move`                 | `localStorage` (`can:wishlist`) | `PATCH` na lista de desejos (posição) |
 | `libraryCollection.add` / `.remove`       | `localStorage` (`can:library`) | `POST` / `DELETE` na biblioteca  |
 | `registerAccount` (`authService.ts`)      | `localStorage` (`can:accounts`) | `POST /users`                    |
 | `signIn` / `signOut` (`authService.ts`)   | `localStorage` (`can:session`) | `POST` / `DELETE /sessions`      |
 | `updateProfile` (`authService.ts`)        | `localStorage` (`can:accounts`) | `PATCH /users/:id`               |
 | `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
 
-O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas e `GameDetails` para a página de um jogo) e em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`).
+O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`) e em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo e a data em que entrou na coleção). A ordem dos itens de cada coleção é a ordem do array.
 
 As funções de conta esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
 

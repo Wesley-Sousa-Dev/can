@@ -1,7 +1,8 @@
 import { MOCK_GAME_DETAILS } from "@/data/gameDetails";
 import { MOCK_GAMES } from "@/data/games";
 import { GENRES } from "@/data/genres";
-import type { Game, GameDetails, Genre } from "@/types/game";
+import { isFreeGame, isGameReleased } from "@/lib/gameAvailability";
+import type { Game, GameDetails, GameListing, Genre } from "@/types/game";
 
 // Camada de negócio: decide quais jogos aparecem em cada vitrine da loja.
 // Os componentes só chamam estas funções e nunca leem os dados diretamente.
@@ -14,20 +15,26 @@ async function fetchAllGames(): Promise<Game[]> {
   return MOCK_GAMES;
 }
 
-function isReleased(game: Game, referenceDate: Date): boolean {
-  return new Date(game.releaseDate) <= referenceDate;
-}
-
-function isFree(game: Game): boolean {
-  return game.priceInCents === 0;
-}
-
 function compareByNewestRelease(firstGame: Game, secondGame: Game): number {
   return secondGame.releaseDate.localeCompare(firstGame.releaseDate);
 }
 
 export async function getAllGames(): Promise<Game[]> {
   return fetchAllGames();
+}
+
+// Todos os jogos com marcadores e análises, para a lista de desejos.
+export async function getGameListings(): Promise<GameListing[]> {
+  // Com a API, vira um GET /games que já traga "tags" e "reviewSummary".
+  const games = await fetchAllGames();
+  return games.map((game) => {
+    const details = MOCK_GAME_DETAILS[game.slug];
+    return {
+      ...game,
+      tags: details?.tags ?? [],
+      reviewSummary: details?.reviewSummary ?? null,
+    };
+  });
 }
 
 export async function getFeaturedGames(): Promise<Game[]> {
@@ -49,7 +56,7 @@ export async function getNewReleases(limit = DEFAULT_LIST_SIZE): Promise<Game[]>
   const games = await fetchAllGames();
   const today = new Date();
   return games
-    .filter((game) => isReleased(game, today))
+    .filter((game) => isGameReleased(game, today))
     .sort(compareByNewestRelease)
     .slice(0, limit);
 }
@@ -58,7 +65,7 @@ export async function getNewReleases(limit = DEFAULT_LIST_SIZE): Promise<Game[]>
 export async function getTopSellers(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
   const games = await fetchAllGames();
   return games
-    .filter((game) => !isFree(game))
+    .filter((game) => !isFreeGame(game))
     .sort((firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold)
     .slice(0, limit);
 }
@@ -67,7 +74,7 @@ export async function getUpcomingGames(limit = DEFAULT_LIST_SIZE): Promise<Game[
   const games = await fetchAllGames();
   const today = new Date();
   return games
-    .filter((game) => !isReleased(game, today))
+    .filter((game) => !isGameReleased(game, today))
     .sort((firstGame, secondGame) => firstGame.releaseDate.localeCompare(secondGame.releaseDate))
     .slice(0, limit);
 }
@@ -75,7 +82,7 @@ export async function getUpcomingGames(limit = DEFAULT_LIST_SIZE): Promise<Game[
 export async function getFreeToPlayGames(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
   const games = await fetchAllGames();
   return games
-    .filter((game) => isFree(game) && isReleased(game, new Date()))
+    .filter((game) => isFreeGame(game) && isGameReleased(game))
     .sort((firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold)
     .slice(0, limit);
 }
@@ -117,12 +124,4 @@ export async function getSimilarGames(game: Game, limit = 4): Promise<Game[]> {
         secondGame.unitsSold - firstGame.unitsSold,
     )
     .slice(0, limit);
-}
-
-export function isGameReleased(game: Game): boolean {
-  return isReleased(game, new Date());
-}
-
-export function isFreeGame(game: Game): boolean {
-  return isFree(game);
 }

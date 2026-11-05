@@ -69,20 +69,24 @@ export interface ReviewSummary {
   totalReviews: number;
 }
 
+/** Jogo com marcadores e análises, para listas mais completas que um card, como a lista de desejos. */
+export interface GameListing extends Game {
+  tags: string[];
+  /** Nulo enquanto o jogo não foi lançado. */
+  reviewSummary: ReviewSummary | null;
+}
+
 /** Dados extras que só a página do jogo usa (equivale a GET /games/:slug). */
-export interface GameDetails extends Game {
+export interface GameDetails extends GameListing {
   publisher: string;
   screenshotUrls: string[];
   aboutSections: GameAboutSection[];
-  tags: string[];
   platforms: Platform[];
   features: GameFeatureId[];
   accessibilityFeatures: string[];
   languages: LanguageSupport[];
   ageRating: AgeRating;
   ageRatingDescriptors: string[];
-  /** Nulo enquanto o jogo não foi lançado. */
-  reviewSummary: ReviewSummary | null;
   minimumRequirements: SystemRequirements;
   recommendedRequirements: SystemRequirements;
 }

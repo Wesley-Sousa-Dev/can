@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { GameCard } from "@/components/game/GameCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { formatGameCount } from "@/lib/text";
 import type { Game } from "@/types/game";
 
 interface GameShelfProps {
@@ -11,14 +12,10 @@ interface GameShelfProps {
   emptyMessage: string;
 }
 
-function describeGameCount(count: number): string {
-  return count === 1 ? "1 jogo" : `${count} jogos`;
-}
-
 export function GameShelf({ headingId, title, games, emptyMessage }: GameShelfProps) {
   return (
     <section aria-labelledby={headingId}>
-      <SectionHeader headingId={headingId} title={title} description={describeGameCount(games.length)} />
+      <SectionHeader headingId={headingId} title={title} description={formatGameCount(games.length)} />
       {games.length === 0 ? (
         // Estado vazio com um próximo passo, em vez de uma área em branco.
         <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6">

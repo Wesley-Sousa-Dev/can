@@ -8,6 +8,7 @@ import { flushSync } from "react-dom";
 import { PriceTag } from "@/components/game/PriceTag";
 import { useGameCollection } from "@/hooks/useGameCollection";
 import { formatReleaseDate } from "@/lib/dates";
+import type { PurchaseOption } from "@/lib/gameAvailability";
 import { formatConjunctionList } from "@/lib/text";
 import {
   cartCollection,
@@ -15,9 +16,6 @@ import {
   wishlistCollection,
 } from "@/services/userCollections";
 import type { Platform } from "@/types/game";
-
-/** buy: jogo pago já lançado · free: gratuito · upcoming: ainda não lançado. */
-export type PurchaseOption = "buy" | "free" | "upcoming";
 
 interface PurchaseBoxProps {
   gameId: string;

@@ -8,18 +8,13 @@ import { GameFeaturesPanel } from "@/components/game-details/GameFeaturesPanel";
 import { GameSummary } from "@/components/game-details/GameSummary";
 import { LanguagesPanel } from "@/components/game-details/LanguagesPanel";
 import { MediaGallery } from "@/components/game-details/MediaGallery";
-import { PurchaseBox, type PurchaseOption } from "@/components/game-details/PurchaseBox";
+import { PurchaseBox } from "@/components/game-details/PurchaseBox";
 import { SimilarGamesSection } from "@/components/game-details/SimilarGamesSection";
 import { SystemRequirementsSection } from "@/components/game-details/SystemRequirementsSection";
 import { StoreToolbar } from "@/components/store/StoreToolbar";
 import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/Breadcrumb";
-import {
-  getAllGameSlugs,
-  getGameBySlug,
-  getSimilarGames,
-  isFreeGame,
-  isGameReleased,
-} from "@/services/gameService";
+import { getPurchaseOption } from "@/lib/gameAvailability";
+import { getAllGameSlugs, getGameBySlug, getSimilarGames } from "@/services/gameService";
 import type { GameDetails } from "@/types/game";
 
 // Gera uma página estática para cada jogo no build.
@@ -37,13 +32,6 @@ export async function generateMetadata({
     return { title: "Jogo não encontrado" };
   }
   return { title: game.title, description: game.shortDescription };
-}
-
-function getPurchaseOption(game: GameDetails): PurchaseOption {
-  if (!isGameReleased(game)) {
-    return "upcoming";
-  }
-  return isFreeGame(game) ? "free" : "buy";
 }
 
 function buildBreadcrumbItems(game: GameDetails): BreadcrumbItem[] {
