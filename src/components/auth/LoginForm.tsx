@@ -12,6 +12,7 @@ import { TextField } from "@/components/forms/TextField";
 import { useSession } from "@/hooks/useSession";
 import { useValidatedForm } from "@/hooks/useValidatedForm";
 import { validateLoginIdentifier, validateLoginPassword } from "@/lib/accountValidation";
+import { withRedirect } from "@/lib/safeRedirect";
 import { signIn } from "@/services/authService";
 
 const FIELD_IDS = {
@@ -22,7 +23,12 @@ const FIELD_IDS = {
 const INVALID_CREDENTIALS_MESSAGE =
   "Apelido, e-mail ou senha incorretos. Confira os dados e tente de novo.";
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Página para onde a pessoa volta depois de entrar. Sem ela, vai para o perfil. */
+  redirectTo?: string;
+}
+
+export function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
   const session = useSession();
   const { values, errors, registerField, validateAllFields } = useValidatedForm(
@@ -57,7 +63,7 @@ export function LoginForm() {
     setIsSubmitting(true);
     const result = await signIn(values.identifier, values.password);
     if (result.isSuccess) {
-      router.push("/profile");
+      router.push(redirectTo ?? "/profile");
       return;
     }
 
@@ -111,7 +117,7 @@ export function LoginForm() {
 
       <p className="mt-6 text-medium text-subtitle">
         Ainda não tem conta?{" "}
-        <Link href="/signup" className="font-medium text-primary-focus underline underline-offset-4 hover:text-title">
+        <Link href={withRedirect("/signup", redirectTo)} className="font-medium text-primary-focus underline underline-offset-4 hover:text-title">
           Criar conta
         </Link>
       </p>

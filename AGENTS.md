@@ -138,10 +138,13 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | `signIn` / `signOut` (`authService.ts`)   | `localStorage` (`can:session`) | `POST` / `DELETE /sessions`      |
 | `updateProfile` (`authService.ts`)        | `localStorage` (`can:accounts`) | `PATCH /users/:id`               |
 | `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
+| `placeOrder` (`checkoutService.ts`)       | `localStorage` (biblioteca, desejos e carrinho) | `POST /orders`   |
 
-O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`) e em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo e a data em que entrou na coleção). A ordem dos itens de cada coleção é a ordem do array.
+O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo e a data em que entrou na coleção) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
 
-As funções de conta esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
+As funções de conta e de pedido esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`, em `src/services/simulatedNetwork.ts`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
+
+O pagamento acontece em um parceiro externo (gateway) que não faz parte do projeto. Por isso `placeOrder` sempre aprova: ele põe os jogos na biblioteca, tira da lista de desejos e esvazia o carrinho. Finalizar a compra exige estar na conta, e o login e o cadastro aceitam `?redirectTo=` para voltar ao checkout (só caminhos internos, conferidos por `getSafeRedirectPath`).
 
 ## Formulários
 

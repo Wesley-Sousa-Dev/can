@@ -132,13 +132,18 @@ export function WishlistItemRow({
       return <p className="text-medium font-medium text-title">Em breve</p>;
     }
 
-    if (purchaseOption === "free") {
-      return isInLibrary ? (
+    // Jogo já comprado (ou gratuito já adicionado): não faz sentido comprar de novo.
+    if (isInLibrary) {
+      return (
         <Link ref={completedActionLinkRef} href="/library" className={DONE_LINK_CLASS}>
           <Check aria-hidden="true" className="size-5 text-cta" />
           Na biblioteca<span className="sr-only">: ver biblioteca</span>
         </Link>
-      ) : (
+      );
+    }
+
+    if (purchaseOption === "free") {
+      return (
         <button type="button" onClick={() => runAndFocusCompletedAction(onAddToLibrary)} className={CTA_BUTTON_CLASS}>
           <Plus aria-hidden="true" className="size-5" />
           Biblioteca<span className="sr-only">: adicionar {game.title}</span>
@@ -284,7 +289,7 @@ export function WishlistItemRow({
           )}
 
           <div className="mt-auto flex flex-wrap items-center justify-end gap-3">
-            {purchaseOption !== "upcoming" && (
+            {purchaseOption !== "upcoming" && !isInLibrary && (
               <PriceTag priceInCents={game.priceInCents} discountPercent={game.discountPercent} />
             )}
             {renderMainAction()}

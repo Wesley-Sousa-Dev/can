@@ -20,6 +20,7 @@ import {
   validateNewPassword,
   validateNickname,
 } from "@/lib/accountValidation";
+import { withRedirect } from "@/lib/safeRedirect";
 import { registerAccount } from "@/services/authService";
 
 const FIELD_IDS = {
@@ -48,7 +49,12 @@ function FieldGroup({ legend, children }: FieldGroupProps) {
   );
 }
 
-export function SignupForm() {
+interface SignupFormProps {
+  /** Página para onde a pessoa vai depois de criar a conta. Sem ela, vai para o perfil. */
+  redirectTo?: string;
+}
+
+export function SignupForm({ redirectTo }: SignupFormProps) {
   const router = useRouter();
   const { values, errors, registerField, validateAllFields, setFieldError } = useValidatedForm(
     { fullName: "", nickname: "", birthDate: "", address: "", email: "", password: "" },
@@ -81,7 +87,7 @@ export function SignupForm() {
     setIsSubmitting(true);
     const result = await registerAccount(values);
     if (result.isSuccess) {
-      router.push("/profile?welcome=true");
+      router.push(redirectTo ?? "/profile?welcome=true");
       return;
     }
 
@@ -184,7 +190,7 @@ export function SignupForm() {
 
       <p className="mt-6 text-medium text-subtitle">
         Já tem uma conta?{" "}
-        <Link href="/login" className="font-medium text-primary-focus underline underline-offset-4 hover:text-title">
+        <Link href={withRedirect("/login", redirectTo)} className="font-medium text-primary-focus underline underline-offset-4 hover:text-title">
           Entrar
         </Link>
       </p>

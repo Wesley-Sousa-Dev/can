@@ -65,6 +65,9 @@ export function PurchaseBox({
     free: `Jogar ${gameTitle}`,
     upcoming: `${gameTitle} chega em breve`,
   };
+  // Um jogo pago já comprado não deve continuar dizendo "Comprar".
+  const heading =
+    purchaseOption === "buy" && isInLibrary ? `Você já tem ${gameTitle}` : headingByOption[purchaseOption];
 
   // O botão some e dá lugar a um link. Sem isso, o foco do teclado iria para
   // o início da página. O flushSync aplica a mudança na hora para o link
@@ -99,27 +102,22 @@ export function PurchaseBox({
   }
 
   function renderMainAction() {
-    if (purchaseOption === "buy") {
-      return isInCart ? (
-        <Link ref={completedActionLinkRef} href="/cart" className={DONE_LINK_CLASS}>
-          <Check aria-hidden="true" className="size-5 text-cta" />
-          No carrinho: ver carrinho
-        </Link>
-      ) : (
-        <button type="button" onClick={addToCart} className={CTA_BUTTON_CLASS}>
-          <ShoppingCart aria-hidden="true" className="size-5" />
-          Adicionar ao carrinho
-        </button>
-      );
+    if (purchaseOption === "upcoming") {
+      return null;
     }
 
-    if (purchaseOption === "free") {
-      return isInLibrary ? (
+    // Jogo já comprado (ou gratuito já adicionado): não faz sentido comprar de novo.
+    if (isInLibrary) {
+      return (
         <Link ref={completedActionLinkRef} href="/library" className={DONE_LINK_CLASS}>
           <Check aria-hidden="true" className="size-5 text-cta" />
           Na biblioteca: ver biblioteca
         </Link>
-      ) : (
+      );
+    }
+
+    if (purchaseOption === "free") {
+      return (
         <button type="button" onClick={addToLibrary} className={CTA_BUTTON_CLASS}>
           <Plus aria-hidden="true" className="size-5" />
           Adicionar à biblioteca
@@ -127,13 +125,23 @@ export function PurchaseBox({
       );
     }
 
-    return null;
+    return isInCart ? (
+      <Link ref={completedActionLinkRef} href="/cart" className={DONE_LINK_CLASS}>
+        <Check aria-hidden="true" className="size-5 text-cta" />
+        No carrinho: ver carrinho
+      </Link>
+    ) : (
+      <button type="button" onClick={addToCart} className={CTA_BUTTON_CLASS}>
+        <ShoppingCart aria-hidden="true" className="size-5" />
+        Adicionar ao carrinho
+      </button>
+    );
   }
 
   return (
     <section aria-labelledby={headingId} className="rounded-lg bg-panel p-5 shadow-medium">
       <h2 id={headingId} className="font-display text-x-large text-title">
-        {headingByOption[purchaseOption]}
+        {heading}
       </h2>
       <p className="mt-1 text-small text-subtitle">Disponível para {platformNames}</p>
       {purchaseOption === "upcoming" && (
@@ -145,7 +153,7 @@ export function PurchaseBox({
       )}
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-        {purchaseOption !== "upcoming" && (
+        {purchaseOption !== "upcoming" && !isInLibrary && (
           <PriceTag
             priceInCents={priceInCents}
             discountPercent={discountPercent}

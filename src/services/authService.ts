@@ -7,6 +7,7 @@ import {
   type StoredAccount,
 } from "@/data/accountStorage";
 import { hashPassword } from "@/lib/password";
+import { waitForSimulatedNetwork } from "@/services/simulatedNetwork";
 import {
   cartCollection,
   libraryCollection,
@@ -29,14 +30,6 @@ export type AccountErrorCode =
 export type AccountResult =
   | { isSuccess: true; user: UserProfile }
   | { isSuccess: false; errorCode: AccountErrorCode };
-
-// Espera artificial para a interface mostrar o estado "carregando",
-// como aconteceria em uma requisição real.
-const SIMULATED_NETWORK_DELAY_MS = 600;
-
-function waitForSimulatedNetwork(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, SIMULATED_NETWORK_DELAY_MS));
-}
 
 function isSameText(firstText: string, secondText: string): boolean {
   return firstText.trim().toLocaleLowerCase("pt-BR") === secondText.trim().toLocaleLowerCase("pt-BR");
