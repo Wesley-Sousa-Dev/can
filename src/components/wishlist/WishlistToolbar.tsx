@@ -5,10 +5,10 @@ import { useRef, useState, type RefObject } from "react";
 
 import { SearchField } from "@/components/forms/SearchField";
 import { SelectField } from "@/components/forms/SelectField";
+import { PRICE_LIMIT_OPTIONS } from "@/lib/pricing";
 import {
   countActiveFilters,
   DEFAULT_WISHLIST_FILTERS,
-  PRICE_LIMIT_OPTIONS,
   WISHLIST_SORT_OPTIONS,
   type WishlistFilters,
   type WishlistSortOrder,

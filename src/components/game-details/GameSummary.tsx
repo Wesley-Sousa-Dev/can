@@ -62,7 +62,7 @@ export function GameSummary({ game, isReleased }: GameSummaryProps) {
             {game.genres.map((genre) => (
               <li key={genre.id}>
                 <Link
-                  href={`/search?genre=${genre.id}`}
+                  href={`/genres/${genre.id}`}
                   className="inline-flex min-h-6 items-center text-primary-focus underline underline-offset-4 hover:text-title"
                 >
                   {genre.name}

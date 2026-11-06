@@ -35,3 +35,35 @@ export function calculatePriceTotals(
   }
   return { fullPriceInCents, discountInCents: fullPriceInCents - totalInCents, totalInCents };
 }
+
+/** Preço que a pessoa paga hoje, já com o desconto. */
+export function getCurrentPriceInCents(game: Pick<Game, "priceInCents" | "discountPercent">): number {
+  return calculateDiscountedPriceInCents(game.priceInCents, game.discountPercent);
+}
+
+export type PriceLimit = "any" | "free" | "up-to-20" | "up-to-50" | "up-to-100";
+
+const MAX_PRICE_IN_CENTS: Record<PriceLimit, number | null> = {
+  any: null,
+  free: 0,
+  "up-to-20": 2000,
+  "up-to-50": 5000,
+  "up-to-100": 10000,
+};
+
+export const PRICE_LIMIT_OPTIONS: { value: PriceLimit; label: string }[] = [
+  { value: "any", label: "Qualquer preço" },
+  { value: "free", label: "Só gratuitos" },
+  { value: "up-to-20", label: `Até ${formatPriceInCents(2000)}` },
+  { value: "up-to-50", label: `Até ${formatPriceInCents(5000)}` },
+  { value: "up-to-100", label: `Até ${formatPriceInCents(10000)}` },
+];
+
+/** O filtro "Preço máximo" olha o preço com desconto, que é o que a pessoa paga. */
+export function isWithinPriceLimit(
+  game: Pick<Game, "priceInCents" | "discountPercent">,
+  priceLimit: PriceLimit,
+): boolean {
+  const maxPriceInCents = MAX_PRICE_IN_CENTS[priceLimit];
+  return maxPriceInCents === null || getCurrentPriceInCents(game) <= maxPriceInCents;
+}

@@ -1,5 +1,5 @@
 import { isGameReleased } from "@/lib/gameAvailability";
-import { calculateDiscountedPriceInCents, formatPriceInCents } from "@/lib/pricing";
+import { getCurrentPriceInCents, isWithinPriceLimit, type PriceLimit } from "@/lib/pricing";
 import { normalizeForSearch } from "@/lib/text";
 import type { GameCollectionEntry } from "@/types/collection";
 import type { GameListing } from "@/types/game";
@@ -31,24 +31,6 @@ export const WISHLIST_SORT_OPTIONS: { value: WishlistSortOrder; label: string }[
   { value: "recently-added", label: "Adicionados recentemente" },
   { value: "newest-release", label: "Lançamento mais recente" },
   { value: "best-reviews", label: "Melhores análises" },
-];
-
-export type PriceLimit = "any" | "free" | "up-to-20" | "up-to-50" | "up-to-100";
-
-const MAX_PRICE_IN_CENTS: Record<PriceLimit, number | null> = {
-  any: null,
-  free: 0,
-  "up-to-20": 2000,
-  "up-to-50": 5000,
-  "up-to-100": 10000,
-};
-
-export const PRICE_LIMIT_OPTIONS: { value: PriceLimit; label: string }[] = [
-  { value: "any", label: "Qualquer preço" },
-  { value: "free", label: "Só gratuitos" },
-  { value: "up-to-20", label: `Até ${formatPriceInCents(2000)}` },
-  { value: "up-to-50", label: `Até ${formatPriceInCents(5000)}` },
-  { value: "up-to-100", label: `Até ${formatPriceInCents(10000)}` },
 ];
 
 export interface WishlistFilters {
@@ -91,22 +73,17 @@ function matchesSearchTerm(game: GameListing, searchTerm: string): boolean {
   return searchableTexts.some((text) => normalizeForSearch(text).includes(normalizedSearchTerm));
 }
 
-function getCurrentPriceInCents(game: GameListing): number {
-  return calculateDiscountedPriceInCents(game.priceInCents, game.discountPercent);
-}
-
 export function filterWishlistItems(
   items: WishlistItem[],
   filters: WishlistFilters,
   referenceDate: Date = new Date(),
 ): WishlistItem[] {
-  const maxPriceInCents = MAX_PRICE_IN_CENTS[filters.priceLimit];
   return items.filter(
     ({ game }) =>
       matchesSearchTerm(game, filters.searchTerm) &&
       (!filters.onlyDiscounted || game.discountPercent > 0) &&
       (!filters.onlyReleased || isGameReleased(game, referenceDate)) &&
-      (maxPriceInCents === null || getCurrentPriceInCents(game) <= maxPriceInCents),
+      isWithinPriceLimit(game, filters.priceLimit),
   );
 }
 

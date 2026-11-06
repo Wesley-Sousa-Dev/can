@@ -39,7 +39,7 @@ function buildBreadcrumbItems(game: GameDetails): BreadcrumbItem[] {
   return [
     { label: "Loja", href: "/" },
     ...(primaryGenre
-      ? [{ label: primaryGenre.name, href: `/search?genre=${primaryGenre.id}` }]
+      ? [{ label: primaryGenre.name, href: `/genres/${primaryGenre.id}` }]
       : []),
     { label: game.title },
   ];

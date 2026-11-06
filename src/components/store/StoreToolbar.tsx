@@ -1,5 +1,7 @@
-import { Search } from "lucide-react";
 import Link from "next/link";
+
+import { StoreSearch } from "@/components/store/StoreSearch";
+import { getGameListings } from "@/services/gameService";
 
 const STORE_SECTION_LINKS = [
   { href: "/#featured", label: "Destaques" },
@@ -9,7 +11,10 @@ const STORE_SECTION_LINKS = [
 ];
 
 // Barra da loja, como a da Steam: atalhos para as seções e a busca.
-export function StoreToolbar() {
+// Busca os jogos no servidor para as sugestões aparecerem sem esperar a rede.
+export async function StoreToolbar() {
+  const games = await getGameListings();
+
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-card p-2 shadow-medium md:flex-row md:items-center md:justify-between">
       <nav aria-label="Seções da loja" className="hidden md:block">
@@ -27,26 +32,7 @@ export function StoreToolbar() {
         </ul>
       </nav>
 
-      <form role="search" action="/search" className="flex md:w-80">
-        <label htmlFor="store-search" className="sr-only">
-          Buscar jogos na loja
-        </label>
-        <input
-          id="store-search"
-          name="q"
-          type="search"
-          placeholder="Buscar jogos"
-          autoComplete="off"
-          className="min-h-11 w-full min-w-0 rounded-l-md border border-border-input bg-background px-3 text-medium text-title placeholder:text-placeholder"
-        />
-        <button
-          type="submit"
-          aria-label="Buscar"
-          className="grid min-h-11 min-w-11 place-items-center rounded-r-md bg-primary text-title transition-colors hover:bg-primary-hover"
-        >
-          <Search aria-hidden="true" className="size-5" />
-        </button>
-      </form>
+      <StoreSearch games={games} />
     </div>
   );
 }

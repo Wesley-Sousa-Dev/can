@@ -1,13 +1,14 @@
-import { GameCard } from "@/components/game/GameCard";
+import { GameCapsule } from "@/components/game/GameCapsule";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import type { Game } from "@/types/game";
+import type { GameShowcase } from "@/types/game";
 
 interface SpecialOffersSectionProps {
-  games: Game[];
+  games: GameShowcase[];
 }
 
 const HEADING_ID = "special-offers-heading";
 
+// Ofertas da loja em cápsulas que crescem ao passar o mouse, como na Steam.
 export function SpecialOffersSection({ games }: SpecialOffersSectionProps) {
   return (
     <section id="special-offers" aria-labelledby={HEADING_ID}>
@@ -23,7 +24,7 @@ export function SpecialOffersSection({ games }: SpecialOffersSectionProps) {
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {games.map((game) => (
             <li key={game.id}>
-              <GameCard game={game} />
+              <GameCapsule game={game} size="small" />
             </li>
           ))}
         </ul>

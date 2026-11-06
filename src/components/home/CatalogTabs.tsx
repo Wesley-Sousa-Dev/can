@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 
 import { GameListItem } from "@/components/game/GameListItem";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { useTabListNavigation } from "@/hooks/useTabListNavigation";
 import type { Game } from "@/types/game";
 
 export interface CatalogTab {
@@ -31,32 +32,12 @@ function getPanelElementId(tabId: string): string {
 // Abas no padrão do W3C (APG): só a aba ativa entra na ordem do Tab,
 // e as setas, Home e End movem entre as abas.
 export function CatalogTabs({ tabs }: CatalogTabsProps) {
-  const [selectedTabId, setSelectedTabId] = useState(tabs[0]?.id);
-  const tabButtonsById = useRef(new Map<string, HTMLButtonElement>());
-
-  function selectAndFocusTab(tabId: string) {
-    setSelectedTabId(tabId);
-    tabButtonsById.current.get(tabId)?.focus();
-  }
-
-  function handleTabListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = tabs.findIndex((tab) => tab.id === selectedTabId);
-    const lastIndex = tabs.length - 1;
-    const targetIndexByKey: Record<string, number> = {
-      ArrowRight: currentIndex === lastIndex ? 0 : currentIndex + 1,
-      ArrowLeft: currentIndex === 0 ? lastIndex : currentIndex - 1,
-      Home: 0,
-      End: lastIndex,
-    };
-
-    const targetIndex = targetIndexByKey[event.key];
-    if (targetIndex === undefined) {
-      return;
-    }
-
-    event.preventDefault();
-    selectAndFocusTab(tabs[targetIndex].id);
-  }
+  const [selectedTabId, setSelectedTabId] = useState(tabs[0]?.id ?? "");
+  const { registerTab, handleTabListKeyDown } = useTabListNavigation(
+    tabs.map((tab) => tab.id),
+    selectedTabId,
+    setSelectedTabId,
+  );
 
   return (
     <section id="catalog" aria-labelledby={HEADING_ID}>
@@ -73,13 +54,7 @@ export function CatalogTabs({ tabs }: CatalogTabsProps) {
           return (
             <button
               key={tab.id}
-              ref={(element) => {
-                if (element) {
-                  tabButtonsById.current.set(tab.id, element);
-                } else {
-                  tabButtonsById.current.delete(tab.id);
-                }
-              }}
+              ref={registerTab(tab.id)}
               type="button"
               role="tab"
               id={getTabElementId(tab.id)}

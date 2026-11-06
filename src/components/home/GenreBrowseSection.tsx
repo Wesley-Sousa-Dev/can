@@ -42,7 +42,7 @@ export function GenreBrowseSection({ genres }: GenreBrowseSectionProps) {
           return (
             <li key={genre.id}>
               <Link
-                href={`/search?genre=${genre.id}`}
+                href={`/genres/${genre.id}`}
                 className="flex min-h-28 flex-col justify-between gap-4 rounded-lg bg-linear-to-br from-primary-hover to-card p-4 shadow-soft transition-shadow hover:from-primary hover:shadow-medium"
               >
                 <GenreIcon aria-hidden="true" className="size-8 text-title" />

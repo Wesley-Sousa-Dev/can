@@ -130,6 +130,8 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | `fetchAllGames` (`gameService.ts`)        | `src/data/games.ts`          | `GET /games`                       |
 | `getGameBySlug` (`gameService.ts`)        | `src/data/gameDetails.ts`    | `GET /games/:slug`                 |
 | `getGameListings` (`gameService.ts`)      | `games.ts` + `gameDetails.ts` | `GET /games` com `tags` e `reviewSummary` |
+| `getGameShowcases` (`gameService.ts`)     | `games.ts` + `gameDetails.ts` | `GET /games` com `publisher` e `screenshotUrls` |
+| `getGameShowcasesByGenre` (`gameService.ts`) | `games.ts` + `gameDetails.ts` | `GET /games?genre=:id` |
 | `cartCollection.add` / `.remove`          | `localStorage` (`can:cart`)  | `POST` / `DELETE` no carrinho      |
 | `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
 | `wishlistCollection.move`                 | `localStorage` (`can:wishlist`) | `PATCH` na lista de desejos (posição) |
@@ -141,7 +143,9 @@ Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/servic
 | `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
 | `placeOrder` (`checkoutService.ts`)       | `localStorage` (biblioteca, desejos e carrinho) | `POST /orders`   |
 
-O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo, a data em que entrou na coleção e, na biblioteca, a última vez que foi aberto) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
+O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e as sugestões da busca, `GameShowcase` para as ofertas especiais da loja e as páginas de gênero e de pesquisa e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo, a data em que entrou na coleção e, na biblioteca, a última vez que foi aberto) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
+
+A busca e os filtros (`src/lib/gameCatalog.ts`) rodam sobre a lista que o servidor já entregou, então as sugestões aparecem sem esperar a rede. Com muitos jogos na API, `searchGames` pode virar `GET /games?search=`.
 
 As funções de conta e de pedido esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`, em `src/services/simulatedNetwork.ts`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
 

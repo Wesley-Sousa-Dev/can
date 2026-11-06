@@ -76,10 +76,14 @@ export interface GameListing extends Game {
   reviewSummary: ReviewSummary | null;
 }
 
-/** Dados extras que só a página do jogo usa (equivale a GET /games/:slug). */
-export interface GameDetails extends GameListing {
+/** Jogo com distribuidora e capturas de tela, para as vitrines das páginas de gênero e de busca. */
+export interface GameShowcase extends GameListing {
   publisher: string;
   screenshotUrls: string[];
+}
+
+/** Dados extras que só a página do jogo usa (equivale a GET /games/:slug). */
+export interface GameDetails extends GameShowcase {
   aboutSections: GameAboutSection[];
   platforms: Platform[];
   features: GameFeatureId[];
