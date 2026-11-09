@@ -1,12 +1,5 @@
-export type GenreId =
-  | "action"
-  | "adventure"
-  | "rpg"
-  | "strategy"
-  | "racing"
-  | "simulation"
-  | "puzzle"
-  | "horror";
+// Gêneros que a Can Games API reconhece nos dados da Steam.
+export type GenreId = "action" | "adventure" | "rpg" | "strategy" | "racing" | "simulation";
 
 export interface Genre {
   id: GenreId;
@@ -14,21 +7,23 @@ export interface Genre {
 }
 
 export interface Game {
+  /** Id do jogo na Steam (Steam App ID). */
   id: string;
-  slug: string;
   title: string;
   shortDescription: string;
   developer: string;
-  /** Data de lançamento no formato ISO (AAAA-MM-DD). */
-  releaseDate: string;
   genres: Genre[];
-  /** Preço cheio em centavos, para evitar erros de arredondamento com decimais. */
-  priceInCents: number;
+  /**
+   * Preço cheio, sem desconto, em centavos de real (centavos evitam erros de
+   * arredondamento). Nulo quando a loja não informa o preço em reais.
+   */
+  priceInCents: number | null;
+  /** Preço a pagar hoje, já com o desconto, em centavos. Nulo junto com o preço cheio. */
+  currentPriceInCents: number | null;
   /** Desconto de 0 a 100. Zero significa que o jogo está sem promoção. */
   discountPercent: number;
-  coverImageUrl: string;
-  unitsSold: number;
-  isFeatured: boolean;
+  /** Capa horizontal da Steam (460 × 215). Nula quando a loja não tem imagem. */
+  coverImageUrl: string | null;
 }
 
 export type Platform = "windows" | "macos" | "linux";
@@ -56,6 +51,7 @@ export interface LanguageSupport {
   hasSubtitles: boolean;
 }
 
+/** Cada campo fica vazio quando a Steam não informa aquele item. */
 export interface SystemRequirements {
   operatingSystem: string;
   processor: string;
@@ -64,32 +60,29 @@ export interface SystemRequirements {
   storage: string;
 }
 
-export interface ReviewSummary {
-  positivePercent: number;
-  totalReviews: number;
-}
+// A interface não mostra data de lançamento nem análises: a API não consegue
+// ler a maioria das datas da Steam e não traz as análises na rota de cada jogo.
 
-/** Jogo com marcadores e análises, para listas mais completas que um card, como a lista de desejos. */
+/** Jogo com marcadores, para listas mais completas que um card, como a lista de desejos. */
 export interface GameListing extends Game {
   tags: string[];
-  /** Nulo enquanto o jogo não foi lançado. */
-  reviewSummary: ReviewSummary | null;
 }
 
-/** Jogo com distribuidora e capturas de tela, para as vitrines das páginas de gênero e de busca. */
+/** Jogo com distribuidora e capturas de tela, para as vitrines da loja, dos gêneros e da busca. */
 export interface GameShowcase extends GameListing {
   publisher: string;
   screenshotUrls: string[];
 }
 
-/** Dados extras que só a página do jogo usa (equivale a GET /games/:slug). */
+/** Dados extras que só a página do jogo usa (vêm de GET /games/:id). */
 export interface GameDetails extends GameShowcase {
   aboutSections: GameAboutSection[];
   platforms: Platform[];
   features: GameFeatureId[];
   accessibilityFeatures: string[];
   languages: LanguageSupport[];
-  ageRating: AgeRating;
+  /** Nula quando o jogo não tem Classificação Indicativa brasileira informada. */
+  ageRating: AgeRating | null;
   ageRatingDescriptors: string[];
   minimumRequirements: SystemRequirements;
   recommendedRequirements: SystemRequirements;
