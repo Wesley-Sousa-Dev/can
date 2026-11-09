@@ -33,8 +33,11 @@ Além da navegação pelo catálogo, o front-end oferece cadastro e autenticaç�
 | ESLint 9 (`eslint-config-next`) | Análise do código |
 | Node.js 20.9+ e npm | Ambiente de execução do servidor do Next.js e gerenciamento das dependências |
 | Can Games API | Dados dos jogos, contas, carrinho, lista de desejos, biblioteca e pedidos |
+| Docker | Execução do front-end e da API em contêineres no servidor de produção |
+| Portainer | Gerenciamento dos contêineres no servidor |
+| Cloudflare Tunnel (`cloudflared`) | Publicação do front-end e da API na internet, com HTTPS |
 
-### Servidor local
+### Execução local
 
 A execução local do projeto utiliza dois servidores:
 
@@ -46,6 +49,15 @@ A execução local do projeto utiliza dois servidores:
 O front-end localiza a API pela variável de ambiente `NEXT_PUBLIC_API_URL`, definida no arquivo `.env.local`. Na ausência dessa variável, é utilizado o endereço `http://localhost:4000/api`.
 
 Como a API armazena os dados em memória, as contas cadastradas são perdidas sempre que o servidor da API é reiniciado.
+
+### Servidor de produção
+
+Em produção, o front-end e a API são executados em contêineres Docker em um servidor caseiro, gerenciados pelo Portainer. A publicação na internet é feita pelo Cloudflare Tunnel: o `cloudflared`, em execução no servidor, mantém uma conexão de saída com a Cloudflare, que entrega o site aos usuários com HTTPS. Dessa forma, não é necessário abrir portas no roteador nem expor o endereço IP do servidor.
+
+Como as operações da conta são feitas pelo navegador, a API também precisa de um endereço público no túnel. Além disso, as variáveis de ambiente devem ser configuradas da seguinte forma:
+
+- **`NEXT_PUBLIC_API_URL`:** deve conter o endereço público da API, terminando em `/api`. O Next.js grava as variáveis `NEXT_PUBLIC_` no código durante o build. Por isso, o valor deve ser informado na construção da imagem (`docker build`), e não apenas nas variáveis do contêiner no Portainer.
+- **`FRONTEND_ORIGIN`:** no `.env` da API, deve incluir o endereço público do front-end, para que o CORS libere as requisições feitas pelo navegador.
 
 ---
 
@@ -408,7 +420,7 @@ Se a API estiver em execução em `http://localhost:4000`, esta etapa é opciona
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
-O endereço deve terminar em `/api`. Em produção, cadastre a mesma variável nas configurações do projeto na plataforma de deploy.
+O endereço deve terminar em `/api`. A configuração do servidor de produção está descrita na seção [Servidor de produção](#servidor-de-produção).
 
 ### 5. Iniciar o servidor
 

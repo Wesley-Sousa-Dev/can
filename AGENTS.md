@@ -123,7 +123,7 @@ O código segue as três camadas vistas na Aula 3:
 | Negócio      | `src/services/`, `src/lib/`                   | Regras: filtros, ordenação, preços, datas      |
 | Dados        | Can Games API (REST) e `src/data/`            | Origem dos dados                               |
 
-Os componentes nunca chamam a API diretamente: sempre passam por `src/services/`. A API é o repositório `can-api` (Node + Express), que busca as ofertas na CheapShark e os dados dos jogos na Steam. O endereço dela fica na variável `NEXT_PUBLIC_API_URL` (veja `.env.example`; na Vercel, cadastre a mesma variável no projeto). O `src/services/apiClient.ts` monta as requisições, envia o token e transforma qualquer falha em `ApiError`, com a mensagem da própria API.
+Os componentes nunca chamam a API diretamente: sempre passam por `src/services/`. A API é o repositório `can-api` (Node + Express), que busca as ofertas na CheapShark e os dados dos jogos na Steam. O endereço dela fica na variável `NEXT_PUBLIC_API_URL` (veja `.env.example`). O `src/services/apiClient.ts` monta as requisições, envia o token e transforma qualquer falha em `ApiError`, com a mensagem da própria API.
 
 | Função ou objeto                              | Rota da API                                 |
 | --------------------------------------------- | ------------------------------------------- |
@@ -156,6 +156,14 @@ Pontos da API que mudam o comportamento do front:
 - **Memória:** a API guarda contas e sessões na memória. Se ela reiniciar, as contas somem e o token salvo deixa de valer; o front percebe o 401 e encerra a sessão.
 
 As coleções mudam na tela na hora (atualização otimista) e voltam ao que eram se a API recusar. As páginas de catálogo (`/`, `/genres/:id`, `/games/:id`, `/search`) rodam a cada visita, com as listas de jogos em cache por 10 minutos (`CATALOG_CACHE_SECONDS`), então o build não depende da API estar no ar. Se ela cair, aparece `src/app/error.tsx`. As imagens vêm da Steam, liberadas em `images.remotePatterns` no `next.config.ts`.
+
+### Deploy
+
+O site e a API rodam em contêineres Docker num servidor caseiro, gerenciados pelo Portainer, e chegam à internet pelo Cloudflare Tunnel (`cloudflared`), sem abrir portas no roteador.
+
+- O navegador chama a API diretamente, então ela também precisa de um endereço público no túnel.
+- O `FRONTEND_ORIGIN` da API precisa incluir o endereço público do front, senão o CORS bloqueia as chamadas.
+- O Next grava o `NEXT_PUBLIC_API_URL` no código durante o build. Por isso, o endereço público da API precisa ser passado no build da imagem (`docker build`). Mudar a variável só no contêiner, pelo Portainer, não tem efeito.
 
 ## Formulários
 
