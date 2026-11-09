@@ -1,25 +1,23 @@
+import { hasKnownPrice } from "@/lib/pricing";
 import type { Game } from "@/types/game";
 
 // Regras que dizem se um jogo já pode ser comprado. Ficam aqui, sem depender
 // dos dados, para valerem tanto no servidor quanto no navegador.
 
-/** buy: jogo pago já lançado · free: gratuito · upcoming: ainda não lançado. */
-export type PurchaseOption = "buy" | "free" | "upcoming";
+/**
+ * buy: jogo pago · free: gratuito · unavailable: a loja não informou o preço
+ * em reais, então não dá para comprar. Todo jogo da API é uma oferta à venda,
+ * então não existe a opção "em breve".
+ */
+export type PurchaseOption = "buy" | "free" | "unavailable";
 
-export function isGameReleased(
-  game: Pick<Game, "releaseDate">,
-  referenceDate: Date = new Date(),
-): boolean {
-  return new Date(game.releaseDate) <= referenceDate;
+export function isFreeGame(game: Pick<Game, "currentPriceInCents">): boolean {
+  return game.currentPriceInCents === 0;
 }
 
-export function isFreeGame(game: Pick<Game, "priceInCents">): boolean {
-  return game.priceInCents === 0;
-}
-
-export function getPurchaseOption(game: Game, referenceDate: Date = new Date()): PurchaseOption {
-  if (!isGameReleased(game, referenceDate)) {
-    return "upcoming";
+export function getPurchaseOption(game: Game): PurchaseOption {
+  if (!hasKnownPrice(game)) {
+    return "unavailable";
   }
   return isFreeGame(game) ? "free" : "buy";
 }

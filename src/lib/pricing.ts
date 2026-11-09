@@ -5,15 +5,15 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export function calculateDiscountedPriceInCents(
-  priceInCents: number,
-  discountPercent: number,
-): number {
-  return Math.round((priceInCents * (100 - discountPercent)) / 100);
-}
-
 export function formatPriceInCents(priceInCents: number): string {
   return currencyFormatter.format(priceInCents / 100);
+}
+
+type GamePrice = Pick<Game, "priceInCents" | "currentPriceInCents">;
+
+/** Jogos sem preço em reais não podem ser comprados: a API recusaria o pedido. */
+export function hasKnownPrice(game: GamePrice): boolean {
+  return game.priceInCents !== null && game.currentPriceInCents !== null;
 }
 
 export interface PriceTotals {
@@ -22,23 +22,21 @@ export interface PriceTotals {
   totalInCents: number;
 }
 
-// O desconto é a diferença entre os totais. Somar o desconto de cada jogo
-// poderia errar um centavo por causa dos arredondamentos.
-export function calculatePriceTotals(
-  games: Pick<Game, "priceInCents" | "discountPercent">[],
-): PriceTotals {
+// O desconto é a diferença entre os totais, com os preços que a loja informou,
+// para o total bater com o que a API cobra no pedido.
+export function calculatePriceTotals(games: GamePrice[]): PriceTotals {
   let fullPriceInCents = 0;
   let totalInCents = 0;
   for (const game of games) {
-    fullPriceInCents += game.priceInCents;
-    totalInCents += calculateDiscountedPriceInCents(game.priceInCents, game.discountPercent);
+    fullPriceInCents += game.priceInCents ?? 0;
+    totalInCents += game.currentPriceInCents ?? 0;
   }
   return { fullPriceInCents, discountInCents: fullPriceInCents - totalInCents, totalInCents };
 }
 
-/** Preço que a pessoa paga hoje, já com o desconto. */
-export function getCurrentPriceInCents(game: Pick<Game, "priceInCents" | "discountPercent">): number {
-  return calculateDiscountedPriceInCents(game.priceInCents, game.discountPercent);
+/** Preço que a pessoa paga hoje. Sem preço conhecido, vai para o fim de qualquer ordem por preço. */
+export function getCurrentPriceInCents(game: GamePrice): number {
+  return game.currentPriceInCents ?? Number.POSITIVE_INFINITY;
 }
 
 export type PriceLimit = "any" | "free" | "up-to-20" | "up-to-50" | "up-to-100";
@@ -60,10 +58,7 @@ export const PRICE_LIMIT_OPTIONS: { value: PriceLimit; label: string }[] = [
 ];
 
 /** O filtro "Preço máximo" olha o preço com desconto, que é o que a pessoa paga. */
-export function isWithinPriceLimit(
-  game: Pick<Game, "priceInCents" | "discountPercent">,
-  priceLimit: PriceLimit,
-): boolean {
+export function isWithinPriceLimit(game: GamePrice, priceLimit: PriceLimit): boolean {
   const maxPriceInCents = MAX_PRICE_IN_CENTS[priceLimit];
   return maxPriceInCents === null || getCurrentPriceInCents(game) <= maxPriceInCents;
 }

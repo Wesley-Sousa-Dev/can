@@ -1,11 +1,14 @@
-import { isGameReleased } from "@/lib/gameAvailability";
 import { getCurrentPriceInCents, isWithinPriceLimit, type PriceLimit } from "@/lib/pricing";
 import { normalizeForSearch } from "@/lib/text";
-import type { GameListing, Genre, GenreId } from "@/types/game";
+import type { GameListing, GameShowcase, Genre, GenreId } from "@/types/game";
 
-// Regras da busca da loja e das listas da página de gênero.
-// São funções puras: com a API, a busca vira GET /games?search=, mas a
-// interface continua chamando estas mesmas funções.
+// Regras da busca da loja, das listas da página de gênero e das vitrines da
+// página inicial. São funções puras sobre a lista que a API já entregou
+// (GET /games): a API traz os jogos, e a ordem, os filtros e as abas são decididos aqui.
+//
+// A ordem em que a API devolve os jogos é a "recomendada": a CheapShark já
+// ordena as ofertas pela qualidade (DealRating). Por isso as ordenações abaixo
+// usam sort estável, que mantém essa ordem entre os empates.
 
 // ---------- Busca ----------
 
@@ -29,34 +32,16 @@ function getSearchRelevance(game: GameListing, searchTerm: string): number {
   return otherTexts.some((text) => normalizeForSearch(text).includes(normalizedSearchTerm)) ? 1 : 0;
 }
 
-/** O nome vale mais que marcador, gênero ou estúdio; no empate, ganha o mais vendido. */
+/** O nome vale mais que marcador, gênero ou estúdio; no empate, fica a ordem recomendada. */
 function sortByRelevance<TGame extends GameListing>(games: TGame[], searchTerm: string): TGame[] {
   return games
     .map((game) => ({ game, relevance: getSearchRelevance(game, searchTerm) }))
-    .sort(
-      (firstMatch, secondMatch) =>
-        secondMatch.relevance - firstMatch.relevance || secondMatch.game.unitsSold - firstMatch.game.unitsSold,
-    )
+    .sort((firstMatch, secondMatch) => secondMatch.relevance - firstMatch.relevance)
     .map(({ game }) => game);
 }
 
-export function searchGames<TGame extends GameListing>(games: TGame[], searchTerm: string): TGame[] {
-  return sortByRelevance(
-    games.filter((game) => getSearchRelevance(game, searchTerm) > 0),
-    searchTerm,
-  );
-}
-
-/** Sugestões da barra de busca: aparecem a partir de 2 letras, no máximo 5. */
+/** Sugestões da barra de busca: aparecem a partir de 2 letras. */
 export const MINIMUM_SUGGESTION_LENGTH = 2;
-const MAXIMUM_SUGGESTIONS = 5;
-
-export function suggestGames<TGame extends GameListing>(games: TGame[], searchTerm: string): TGame[] {
-  if (normalizeForSearch(searchTerm).length < MINIMUM_SUGGESTION_LENGTH) {
-    return [];
-  }
-  return searchGames(games, searchTerm).slice(0, MAXIMUM_SUGGESTIONS);
-}
 
 // ---------- Filtros ----------
 
@@ -121,29 +106,22 @@ export function countGamesByGenre(games: GameListing[], ignoredGenreId?: GenreId
 
 // ---------- Ordenação ----------
 
-export type CatalogSortOrder = "relevance" | "top-sellers" | "newest" | "top-rated" | "lowest-price" | "name";
+export type CatalogSortOrder = "relevance" | "biggest-discount" | "lowest-price" | "name";
 
 export const CATALOG_SORT_OPTIONS: { value: CatalogSortOrder; label: string }[] = [
   { value: "relevance", label: "Relevância" },
-  { value: "top-sellers", label: "Mais vendidos" },
-  { value: "newest", label: "Lançamento mais recente" },
-  { value: "top-rated", label: "Mais bem avaliados" },
+  { value: "biggest-discount", label: "Maior desconto" },
   { value: "lowest-price", label: "Menor preço" },
   { value: "name", label: "Nome (A a Z)" },
 ];
 
 type GameComparator = (firstGame: GameListing, secondGame: GameListing) => number;
 
-// Jogos sem análises (ainda não lançados) recebem -1 e vão para o fim.
-function getPositivePercent(game: GameListing): number {
-  return game.reviewSummary?.positivePercent ?? -1;
-}
-
 const GAME_COMPARATORS: Record<Exclude<CatalogSortOrder, "relevance">, GameComparator> = {
-  "top-sellers": (firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold,
-  newest: (firstGame, secondGame) => secondGame.releaseDate.localeCompare(firstGame.releaseDate),
-  "top-rated": (firstGame, secondGame) => getPositivePercent(secondGame) - getPositivePercent(firstGame),
-  "lowest-price": (firstGame, secondGame) => getCurrentPriceInCents(firstGame) - getCurrentPriceInCents(secondGame),
+  "biggest-discount": (firstGame, secondGame) => secondGame.discountPercent - firstGame.discountPercent,
+  // Jogo sem preço vale "infinito" e vai para o fim; dois sem preço empatam.
+  "lowest-price": (firstGame, secondGame) =>
+    getCurrentPriceInCents(firstGame) - getCurrentPriceInCents(secondGame) || 0,
   name: (firstGame, secondGame) => nameCollator.compare(firstGame.title, secondGame.title),
 };
 
@@ -156,54 +134,93 @@ export function sortCatalog<TGame extends GameListing>(
   if (sortOrder === "relevance") {
     return sortByRelevance(games, searchTerm);
   }
-  const compare = GAME_COMPARATORS[sortOrder];
-  return [...games].sort(
-    (firstGame, secondGame) => compare(firstGame, secondGame) || nameCollator.compare(firstGame.title, secondGame.title),
-  );
+  return [...games].sort(GAME_COMPARATORS[sortOrder]);
 }
 
 // ---------- Abas da página de gênero ----------
 
-export type GenreViewId = "all" | "top-sellers" | "newest" | "top-rated" | "upcoming";
+export type GenreViewId = "all" | "biggest-discount" | "lowest-price";
 
 export const GENRE_VIEWS: { id: GenreViewId; label: string }[] = [
   { id: "all", label: "Tudo" },
-  { id: "top-sellers", label: "Mais vendidos" },
-  { id: "newest", label: "Mais recentes" },
-  { id: "top-rated", label: "Mais bem avaliados" },
-  { id: "upcoming", label: "Futuros" },
+  { id: "biggest-discount", label: "Maiores descontos" },
+  { id: "lowest-price", label: "Menor preço" },
 ];
 
-/** Cada aba é um recorte com a própria ordem, como as da Steam. */
-export function applyGenreView<TGame extends GameListing>(
-  games: TGame[],
-  viewId: GenreViewId,
-  referenceDate: Date = new Date(),
-): TGame[] {
-  const releasedGames = games.filter((game) => isGameReleased(game, referenceDate));
-  switch (viewId) {
-    case "all":
-      return sortCatalog(games, "top-sellers");
-    case "top-sellers":
-      return sortCatalog(releasedGames, "top-sellers");
-    case "newest":
-      return sortCatalog(releasedGames, "newest");
-    case "top-rated":
-      return sortCatalog(
-        releasedGames.filter((game) => game.reviewSummary !== null),
-        "top-rated",
-      );
-    case "upcoming":
-      return games
-        .filter((game) => !isGameReleased(game, referenceDate))
-        .sort((firstGame, secondGame) => firstGame.releaseDate.localeCompare(secondGame.releaseDate));
-  }
+/** Cada aba é a lista do gênero em uma ordem, como as da Steam. "Tudo" é a ordem recomendada. */
+export function applyGenreView<TGame extends GameListing>(games: TGame[], viewId: GenreViewId): TGame[] {
+  return viewId === "all" ? games : sortCatalog(games, viewId);
 }
 
-/** Títulos populares: os jogos já lançados mais vendidos, no máximo 5 (2 grandes e 3 menores). */
-export function getPopularTitles<TGame extends GameListing>(
-  games: TGame[],
-  referenceDate: Date = new Date(),
-): TGame[] {
-  return applyGenreView(games, "top-sellers", referenceDate).slice(0, 5);
+const POPULAR_TITLE_COUNT = 5;
+
+/** Títulos populares: as 5 primeiras ofertas recomendadas do gênero (2 grandes e 3 menores). */
+export function getPopularTitles<TGame extends GameListing>(games: TGame[]): TGame[] {
+  return games.slice(0, POPULAR_TITLE_COUNT);
+}
+
+// ---------- Vitrines da página inicial ----------
+
+const FEATURED_GAME_COUNT = 5;
+const SPECIAL_OFFER_COUNT = 8;
+const CATALOG_TAB_GAME_COUNT = 6;
+const BUDGET_PRICE_IN_CENTS = 2000;
+const MID_RANGE_PRICE_IN_CENTS = 5000;
+
+/** Destaques: as primeiras ofertas recomendadas que têm capturas de tela para o carrossel. */
+export function selectFeaturedGames<TGame extends GameShowcase>(games: TGame[]): TGame[] {
+  return games.filter((game) => game.screenshotUrls.length > 0).slice(0, FEATURED_GAME_COUNT);
+}
+
+function excludeGames<TGame extends GameListing>(games: TGame[], excludedGames: TGame[]): TGame[] {
+  const excludedGameIds = new Set(excludedGames.map((game) => game.id));
+  return games.filter((game) => !excludedGameIds.has(game.id));
+}
+
+/** Ofertas especiais: os maiores descontos, sem repetir os destaques de cima. */
+export function selectSpecialOffers<TGame extends GameShowcase>(games: TGame[], featuredGames: TGame[]): TGame[] {
+  return sortCatalog(
+    excludeGames(games, featuredGames).filter((game) => game.discountPercent > 0),
+    "biggest-discount",
+  ).slice(0, SPECIAL_OFFER_COUNT);
+}
+
+/** Recomendados: as ofertas seguintes da lista da API, depois dos destaques. */
+export function selectRecommendedGames<TGame extends GameListing>(games: TGame[], featuredGames: TGame[]): TGame[] {
+  return excludeGames(games, featuredGames).slice(0, CATALOG_TAB_GAME_COUNT);
+}
+
+/** Jogos até R$ 20, dos mais baratos para os mais caros. */
+export function selectBudgetGames<TGame extends GameListing>(games: TGame[]): TGame[] {
+  return sortCatalog(
+    games.filter((game) => getCurrentPriceInCents(game) <= BUDGET_PRICE_IN_CENTS),
+    "lowest-price",
+  ).slice(0, CATALOG_TAB_GAME_COUNT);
+}
+
+/** Jogos acima de R$ 20 e até R$ 50, na ordem recomendada. */
+export function selectMidRangeGames<TGame extends GameListing>(games: TGame[]): TGame[] {
+  return games
+    .filter((game) => {
+      const currentPriceInCents = getCurrentPriceInCents(game);
+      return currentPriceInCents > BUDGET_PRICE_IN_CENTS && currentPriceInCents <= MID_RANGE_PRICE_IN_CENTS;
+    })
+    .slice(0, CATALOG_TAB_GAME_COUNT);
+}
+
+// ---------- Jogos parecidos ----------
+
+const SIMILAR_GAME_COUNT = 4;
+
+function countSharedGenres(firstGame: GameListing, secondGame: GameListing): number {
+  const secondGameGenreIds = new Set(secondGame.genres.map((genre) => genre.id));
+  return firstGame.genres.filter((genre) => secondGameGenreIds.has(genre.id)).length;
+}
+
+/** Jogos com mais gêneros em comum aparecem primeiro; no empate, fica a ordem recomendada. */
+export function selectSimilarGames<TGame extends GameListing>(game: GameListing, games: TGame[]): TGame[] {
+  return games
+    .filter((candidate) => candidate.id !== game.id && countSharedGenres(game, candidate) > 0)
+    .sort((firstGame, secondGame) => countSharedGenres(game, secondGame) - countSharedGenres(game, firstGame))
+    .slice(0, SIMILAR_GAME_COUNT);
 }

@@ -1,162 +1,102 @@
-import { MOCK_GAME_DETAILS } from "@/data/gameDetails";
-import { MOCK_GAMES } from "@/data/games";
 import { GENRES } from "@/data/genres";
-import { isFreeGame, isGameReleased } from "@/lib/gameAvailability";
-import type { Game, GameDetails, GameListing, GameShowcase, Genre, GenreId } from "@/types/game";
+import { ApiError, CATALOG_CACHE_SECONDS, requestApi } from "@/services/apiClient";
+import { toGameDetails, toGameShowcase } from "@/services/gameMapper";
+import type { ApiGame, ApiGameDetails } from "@/types/api";
+import type { GameDetails, GameShowcase, Genre, GenreId } from "@/types/game";
 
-// Camada de negócio: decide quais jogos aparecem em cada vitrine da loja.
-// Os componentes só chamam estas funções e nunca leem os dados diretamente.
+// Camada de negócio do catálogo: cada função corresponde a uma rota de jogos
+// da Can Games API, que reúne as ofertas da CheapShark e os dados da Steam.
+//   getStoreCatalog          → GET /games?limit=60 (jogos em promoção)
+//   getGameShowcasesByGenre  → GET /games?genre=:id
+//   searchStoreCatalog       → GET /games?search=:termo
+//   getGameDetails           → GET /games/:id
 
-const DEFAULT_LIST_SIZE = 6;
-const SPECIAL_OFFERS_LIST_SIZE = 8;
+/** O máximo que a API devolve por página. */
+const CATALOG_PAGE_SIZE = 60;
+const SUGGESTION_COUNT = 5;
 
-async function fetchAllGames(): Promise<Game[]> {
-  // Quando a API ficar pronta, basta trocar o mock por uma requisição GET aqui.
-  return MOCK_GAMES;
-}
-
-function compareByNewestRelease(firstGame: Game, secondGame: Game): number {
-  return secondGame.releaseDate.localeCompare(firstGame.releaseDate);
-}
-
-export async function getAllGames(): Promise<Game[]> {
-  return fetchAllGames();
-}
-
-// Todos os jogos com marcadores e análises, para a lista de desejos.
-export async function getGameListings(): Promise<GameListing[]> {
-  // Com a API, vira um GET /games que já traga "tags" e "reviewSummary".
-  const games = await fetchAllGames();
-  return games.map((game) => {
-    const details = MOCK_GAME_DETAILS[game.slug];
-    return {
-      ...game,
-      tags: details?.tags ?? [],
-      reviewSummary: details?.reviewSummary ?? null,
-    };
+async function fetchGameList(query: Record<string, string>): Promise<GameShowcase[]> {
+  const apiGames = await requestApi<ApiGame[]>(`/games?${new URLSearchParams(query)}`, {
+    cacheSeconds: CATALOG_CACHE_SECONDS,
   });
-}
-
-// Jogos com distribuidora e capturas de tela, para as páginas de gênero e de busca.
-export async function getGameShowcases(): Promise<GameShowcase[]> {
-  // Com a API, vira um GET /games que já traga esses campos.
-  const games = await fetchAllGames();
-  return games.flatMap((game) => {
-    const details = MOCK_GAME_DETAILS[game.slug];
-    if (!details) {
+  // Sem o id da Steam, a página do jogo não teria como buscá-lo depois.
+  // A mesma oferta pode vir duas vezes; fica a primeira.
+  const seenGameIds = new Set<string>();
+  return apiGames.flatMap((apiGame) => {
+    if (!apiGame.steamAppId || seenGameIds.has(apiGame.id)) {
       return [];
     }
-    return [
-      {
-        ...game,
-        tags: details.tags,
-        reviewSummary: details.reviewSummary,
-        publisher: details.publisher,
-        screenshotUrls: details.screenshotUrls,
-      },
-    ];
+    seenGameIds.add(apiGame.id);
+    return [toGameShowcase(apiGame)];
   });
 }
 
-// Jogos de um gênero, dos mais vendidos para os menos (equivale a GET /games?genre=:id).
+/** Vitrine da loja: as melhores ofertas do momento, na ordem de relevância da CheapShark. */
+export async function getStoreCatalog(): Promise<GameShowcase[]> {
+  return fetchGameList({ limit: String(CATALOG_PAGE_SIZE) });
+}
+
 export async function getGameShowcasesByGenre(genreId: GenreId): Promise<GameShowcase[]> {
-  const games = await getGameShowcases();
-  return games
-    .filter((game) => game.genres.some((genre) => genre.id === genreId))
-    .sort((firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold);
+  return fetchGameList({ genre: genreId, limit: String(CATALOG_PAGE_SIZE) });
 }
 
-// Devolve null quando o gênero não existe, para a página mostrar o 404.
-export async function getGenreById(genreId: string): Promise<Genre | null> {
-  return Object.values(GENRES).find((genre) => genre.id === genreId) ?? null;
+/** A busca inclui jogos sem promoção, porque quem procura um nome quer achá-lo pelo preço que for. */
+export async function searchStoreCatalog(searchTerm: string): Promise<GameShowcase[]> {
+  const trimmedSearchTerm = searchTerm.trim();
+  if (!trimmedSearchTerm) {
+    return getStoreCatalog();
+  }
+  return fetchGameList({ search: trimmedSearchTerm, onSale: "false", limit: String(CATALOG_PAGE_SIZE) });
 }
 
-export async function getFeaturedGames(): Promise<Game[]> {
-  const games = await fetchAllGames();
-  return games.filter((game) => game.isFeatured);
+/** Sugestões da barra de busca (chamada pelo navegador enquanto a pessoa digita). */
+export async function suggestStoreGames(searchTerm: string): Promise<GameShowcase[]> {
+  return fetchGameList({ search: searchTerm.trim(), onSale: "false", limit: String(SUGGESTION_COUNT) });
 }
 
-// Vem com capturas de tela e marcadores porque a cápsula da oferta cresce e os mostra.
-export async function getSpecialOffers(
-  limit = SPECIAL_OFFERS_LIST_SIZE,
-): Promise<GameShowcase[]> {
-  const games = await getGameShowcases();
-  return games
-    .filter((game) => game.discountPercent > 0)
-    .sort((firstGame, secondGame) => secondGame.discountPercent - firstGame.discountPercent)
-    .slice(0, limit);
+/** Devolve null quando o jogo não existe, para a página mostrar o 404. */
+export async function getGameDetails(gameId: string): Promise<GameDetails | null> {
+  // Ids da Steam são só números; qualquer outra coisa nem chega à API.
+  if (!/^\d+$/.test(gameId)) {
+    return null;
+  }
+  try {
+    const apiGame = await requestApi<ApiGameDetails>(`/games/${gameId}`, { cacheSeconds: CATALOG_CACHE_SECONDS });
+    return toGameDetails(apiGame);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
-export async function getNewReleases(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
-  const games = await fetchAllGames();
-  const today = new Date();
-  return games
-    .filter((game) => isGameReleased(game, today))
-    .sort(compareByNewestRelease)
-    .slice(0, limit);
+// No navegador, cada jogo é buscado uma vez só por visita: o carrinho, a lista
+// de desejos e a biblioteca costumam repetir os mesmos jogos.
+const gameRequestsById = new Map<string, Promise<GameShowcase | null>>();
+
+function getCachedGameDetails(gameId: string): Promise<GameShowcase | null> {
+  let gameRequest = gameRequestsById.get(gameId);
+  if (!gameRequest) {
+    gameRequest = getGameDetails(gameId);
+    // Uma falha de rede não fica guardada: a próxima tentativa pede de novo.
+    gameRequest.catch(() => gameRequestsById.delete(gameId));
+    gameRequestsById.set(gameId, gameRequest);
+  }
+  return gameRequest;
 }
 
-// Jogos gratuitos ficam de fora porque "mais vendidos" mede vendas pagas.
-export async function getTopSellers(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
-  const games = await fetchAllGames();
-  return games
-    .filter((game) => !isFreeGame(game))
-    .sort((firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold)
-    .slice(0, limit);
-}
-
-export async function getUpcomingGames(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
-  const games = await fetchAllGames();
-  const today = new Date();
-  return games
-    .filter((game) => !isGameReleased(game, today))
-    .sort((firstGame, secondGame) => firstGame.releaseDate.localeCompare(secondGame.releaseDate))
-    .slice(0, limit);
-}
-
-export async function getFreeToPlayGames(limit = DEFAULT_LIST_SIZE): Promise<Game[]> {
-  const games = await fetchAllGames();
-  return games
-    .filter((game) => isFreeGame(game) && isGameReleased(game))
-    .sort((firstGame, secondGame) => secondGame.unitsSold - firstGame.unitsSold)
-    .slice(0, limit);
+/** Jogos das coleções do usuário, na mesma ordem dos ids. Ids que a loja não acha ficam de fora. */
+export async function getGamesByIds(gameIds: readonly string[]): Promise<GameShowcase[]> {
+  const games = await Promise.all(gameIds.map(getCachedGameDetails));
+  return games.filter((game) => game !== null);
 }
 
 export async function getGenres(): Promise<Genre[]> {
   return Object.values(GENRES);
 }
 
-export async function getAllGameSlugs(): Promise<string[]> {
-  const games = await fetchAllGames();
-  return games.map((game) => game.slug);
-}
-
-// Devolve null quando o jogo não existe, para a página mostrar o 404.
-export async function getGameBySlug(slug: string): Promise<GameDetails | null> {
-  // Quando a API ficar pronta, esta função vira um GET /games/:slug.
-  const games = await fetchAllGames();
-  const game = games.find((candidate) => candidate.slug === slug);
-  const details = MOCK_GAME_DETAILS[slug];
-  if (!game || !details) {
-    return null;
-  }
-  return { ...game, ...details };
-}
-
-function countSharedGenres(firstGame: Game, secondGame: Game): number {
-  const secondGameGenreIds = new Set(secondGame.genres.map((genre) => genre.id));
-  return firstGame.genres.filter((genre) => secondGameGenreIds.has(genre.id)).length;
-}
-
-// Jogos com mais gêneros em comum aparecem primeiro; o empate fica com o mais vendido.
-export async function getSimilarGames(game: Game, limit = 4): Promise<Game[]> {
-  const games = await fetchAllGames();
-  return games
-    .filter((candidate) => candidate.id !== game.id && countSharedGenres(game, candidate) > 0)
-    .sort(
-      (firstGame, secondGame) =>
-        countSharedGenres(game, secondGame) - countSharedGenres(game, firstGame) ||
-        secondGame.unitsSold - firstGame.unitsSold,
-    )
-    .slice(0, limit);
+// Devolve null quando o gênero não existe, para a página mostrar o 404.
+export async function getGenreById(genreId: string): Promise<Genre | null> {
+  return Object.values(GENRES).find((genre) => genre.id === genreId) ?? null;
 }

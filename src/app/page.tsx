@@ -1,62 +1,45 @@
+import { connection } from "next/server";
+
 import { CatalogTabs, type CatalogTab } from "@/components/home/CatalogTabs";
 import { FeaturedCarousel } from "@/components/home/FeaturedCarousel";
 import { GenreBrowseSection } from "@/components/home/GenreBrowseSection";
 import { SpecialOffersSection } from "@/components/home/SpecialOffersSection";
 import { StoreToolbar } from "@/components/store/StoreToolbar";
 import {
-  getFeaturedGames,
-  getFreeToPlayGames,
-  getGenres,
-  getNewReleases,
-  getSpecialOffers,
-  getTopSellers,
-  getUpcomingGames,
-} from "@/services/gameService";
+  selectBudgetGames,
+  selectFeaturedGames,
+  selectMidRangeGames,
+  selectRecommendedGames,
+  selectSpecialOffers,
+} from "@/lib/gameCatalog";
+import { getGenres, getStoreCatalog } from "@/services/gameService";
 
 export default async function HomePage() {
-  const [
-    featuredGames,
-    specialOffers,
-    genres,
-    newReleases,
-    topSellers,
-    upcomingGames,
-    freeToPlayGames,
-  ] = await Promise.all([
-    getFeaturedGames(),
-    getSpecialOffers(),
-    getGenres(),
-    getNewReleases(),
-    getTopSellers(),
-    getUpcomingGames(),
-    getFreeToPlayGames(),
-  ]);
+  // Os dados vêm da API a cada visita (com cache de alguns minutos), e não no build.
+  await connection();
+  // Uma chamada só (GET /games) alimenta todas as vitrines da página.
+  const [catalog, genres] = await Promise.all([getStoreCatalog(), getGenres()]);
+  const featuredGames = selectFeaturedGames(catalog);
+  const specialOffers = selectSpecialOffers(catalog, featuredGames);
 
   const catalogTabs: CatalogTab[] = [
     {
-      id: "new-releases",
-      label: "Novidades",
-      games: newReleases,
-      emptyMessage: "Nenhum lançamento recente.",
+      id: "recommended",
+      label: "Recomendados",
+      games: selectRecommendedGames(catalog, featuredGames),
+      emptyMessage: "Nenhuma oferta recomendada no momento.",
     },
     {
-      id: "top-sellers",
-      label: "Mais vendidos",
-      games: topSellers,
-      emptyMessage: "Ainda não há vendas registradas.",
+      id: "budget",
+      label: "Até R$ 20",
+      games: selectBudgetGames(catalog),
+      emptyMessage: "Nenhuma oferta até R$ 20 no momento.",
     },
     {
-      id: "upcoming",
-      label: "Em breve",
-      games: upcomingGames,
-      emptyMessage: "Nenhum lançamento anunciado.",
-      showReleaseDate: true,
-    },
-    {
-      id: "free-to-play",
-      label: "Gratuitos",
-      games: freeToPlayGames,
-      emptyMessage: "Nenhum jogo gratuito no momento.",
+      id: "mid-range",
+      label: "De R$ 20 a R$ 50",
+      games: selectMidRangeGames(catalog),
+      emptyMessage: "Nenhuma oferta entre R$ 20 e R$ 50 no momento.",
     },
   ];
 

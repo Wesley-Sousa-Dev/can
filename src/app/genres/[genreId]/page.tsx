@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { GenreCatalog } from "@/components/catalog/GenreCatalog";
 import { GenreHero } from "@/components/catalog/GenreHero";
@@ -10,12 +11,6 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { getPopularTitles } from "@/lib/gameCatalog";
 import { getGameShowcasesByGenre, getGenreById, getGenres } from "@/services/gameService";
 
-// Gera uma página estática para cada gênero no build.
-export async function generateStaticParams() {
-  const genres = await getGenres();
-  return genres.map((genre) => ({ genreId: genre.id }));
-}
-
 export async function generateMetadata({ params }: PageProps<"/genres/[genreId]">): Promise<Metadata> {
   const { genreId } = await params;
   const genre = await getGenreById(genreId);
@@ -24,11 +19,13 @@ export async function generateMetadata({ params }: PageProps<"/genres/[genreId]"
   }
   return {
     title: `Jogos de ${genre.name}`,
-    description: `Os títulos mais populares de ${genre.name} na Can e a lista completa do gênero.`,
+    description: `As melhores ofertas de ${genre.name} na Can, com busca e filtros.`,
   };
 }
 
 export default async function GenrePage({ params }: PageProps<"/genres/[genreId]">) {
+  // Os dados vêm da API a cada visita (com cache de alguns minutos), e não no build.
+  await connection();
   const { genreId } = await params;
   const genre = await getGenreById(genreId);
   if (!genre) {
