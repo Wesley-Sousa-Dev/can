@@ -21,15 +21,24 @@ const REQUIREMENT_LABELS: { key: keyof SystemRequirements; label: string }[] = [
   { key: "storage", label: "Armazenamento" },
 ];
 
+/** A Steam nem sempre informa todos os itens; os vazios não aparecem. */
+export function hasAnyRequirement(requirements: SystemRequirements): boolean {
+  return REQUIREMENT_LABELS.some(({ key }) => requirements[key].trim() !== "");
+}
+
 function RequirementsList({ title, requirements }: RequirementsListProps) {
+  const informedRequirements = REQUIREMENT_LABELS.filter(({ key }) => requirements[key].trim() !== "");
   return (
     <div className="rounded-lg bg-panel p-4 shadow-soft">
       <h3 className="text-medium font-medium uppercase tracking-wide text-subtitle">{title}</h3>
+      {informedRequirements.length === 0 && (
+        <p className="mt-3 text-medium text-subtitle">A loja não informou estes requisitos.</p>
+      )}
       <dl className="mt-3 flex flex-col gap-3">
-        {REQUIREMENT_LABELS.map(({ key, label }) => (
+        {informedRequirements.map(({ key, label }) => (
           <div key={key}>
             <dt className="text-small text-subtitle">{label}</dt>
-            <dd className="text-medium text-title">{requirements[key]}</dd>
+            <dd className="text-medium text-title wrap-break-word">{requirements[key]}</dd>
           </div>
         ))}
       </dl>

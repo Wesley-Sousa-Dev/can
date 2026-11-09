@@ -2,9 +2,7 @@ import {
   Castle,
   Compass,
   Gauge,
-  Ghost,
   Plane,
-  Puzzle,
   Swords,
   WandSparkles,
   type LucideIcon,
@@ -27,8 +25,6 @@ const GENRE_ICONS: Record<GenreId, LucideIcon> = {
   strategy: Castle,
   racing: Gauge,
   simulation: Plane,
-  puzzle: Puzzle,
-  horror: Ghost,
 };
 
 export function GenreBrowseSection({ genres }: GenreBrowseSectionProps) {
@@ -36,7 +32,7 @@ export function GenreBrowseSection({ genres }: GenreBrowseSectionProps) {
     <section id="genres" aria-labelledby={HEADING_ID}>
       <SectionHeader headingId={HEADING_ID} title="Navegue por gênero" />
 
-      <ul className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3">
         {genres.map((genre) => {
           const GenreIcon = GENRE_ICONS[genre.id];
           return (

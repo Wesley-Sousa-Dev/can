@@ -2,15 +2,13 @@ import Link from "next/link";
 
 import { GameCover } from "@/components/game/GameCover";
 import { PriceTag } from "@/components/game/PriceTag";
-import { formatReleaseDate } from "@/lib/dates";
 import type { Game } from "@/types/game";
 
 interface GameListItemProps {
   game: Game;
-  showReleaseDate?: boolean;
 }
 
-export function GameListItem({ game, showReleaseDate = false }: GameListItemProps) {
+export function GameListItem({ game }: GameListItemProps) {
   const genreNames = game.genres.map((genre) => genre.name).join(" · ");
 
   return (
@@ -23,25 +21,16 @@ export function GameListItem({ game, showReleaseDate = false }: GameListItemProp
         <div className="min-w-0">
           <h3 className="text-medium font-medium">
             <Link
-              href={`/games/${game.slug}`}
+              href={`/games/${game.id}`}
               className="after:absolute after:inset-0 group-hover:text-primary-focus focus-visible:outline-none"
             >
               {game.title}
             </Link>
           </h3>
           <p className="text-small text-subtitle">{genreNames}</p>
-          {showReleaseDate && (
-            <p className="text-small text-subtitle">
-              Lançamento:{" "}
-              <time dateTime={game.releaseDate}>
-                {formatReleaseDate(game.releaseDate)}
-              </time>
-            </p>
-          )}
         </div>
         <PriceTag
-          priceInCents={game.priceInCents}
-          discountPercent={game.discountPercent}
+          price={game}
           className="shrink-0"
         />
       </div>

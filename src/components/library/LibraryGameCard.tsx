@@ -39,7 +39,7 @@ export function LibraryGameCard({ item, layout, onPlay }: LibraryGameCardProps) 
   const { game } = item;
   const playButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = `library-title-${game.id}`;
-  const gamePageUrl = `/games/${game.slug}`;
+  const gamePageUrl = `/games/${game.id}`;
   const isNew = isNewInLibrary(item);
 
   // Na ordem por atividade, o jogo aberto sobe para o topo. Mover a linha tira

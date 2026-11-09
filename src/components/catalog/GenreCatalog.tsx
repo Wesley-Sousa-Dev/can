@@ -38,7 +38,7 @@ function describeMatchCount(count: number): string {
 }
 
 // Lista com todos os jogos do gênero, abaixo dos destaques, como a da Steam:
-// abas de recorte (Tudo, Mais vendidos...), busca por nome e filtros ao lado.
+// abas de ordem (Tudo, Maiores descontos, Menor preço), busca por nome e filtros ao lado.
 export function GenreCatalog({ genre, games }: GenreCatalogProps) {
   const [selectedViewId, setSelectedViewId] = useState<GenreViewId>("all");
   const [filters, setFilters] = useState<CatalogFilters>(DEFAULT_CATALOG_FILTERS);

@@ -22,7 +22,7 @@ export function GameCard({ game }: GameCardProps) {
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="text-large font-medium">
           <Link
-            href={`/games/${game.slug}`}
+            href={`/games/${game.id}`}
             className="after:absolute after:inset-0 group-hover:text-primary-focus focus-visible:outline-none"
           >
             {game.title}
@@ -30,8 +30,7 @@ export function GameCard({ game }: GameCardProps) {
         </h3>
         <p className="text-small text-subtitle">{genreNames}</p>
         <PriceTag
-          priceInCents={game.priceInCents}
-          discountPercent={game.discountPercent}
+          price={game}
           className="mt-auto self-end pt-3"
         />
       </div>

@@ -16,7 +16,7 @@ export function getCartTitleLinkId(gameId: string): string {
 }
 
 export function CartItemRow({ game, onRemove }: CartItemRowProps) {
-  const gamePageUrl = `/games/${game.slug}`;
+  const gamePageUrl = `/games/${game.id}`;
   const genreNames = game.genres.map((genre) => genre.name).join(" · ");
 
   return (
@@ -49,7 +49,7 @@ export function CartItemRow({ game, onRemove }: CartItemRowProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start">
-          <PriceTag priceInCents={game.priceInCents} discountPercent={game.discountPercent} />
+          <PriceTag price={game} />
           <button
             type="button"
             onClick={onRemove}

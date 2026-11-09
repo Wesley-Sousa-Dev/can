@@ -7,10 +7,10 @@ import { useState } from "react";
 import { GameCover } from "@/components/game/GameCover";
 import { PriceTag } from "@/components/game/PriceTag";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import type { Game } from "@/types/game";
+import type { GameShowcase } from "@/types/game";
 
 interface FeaturedCarouselProps {
-  games: Game[];
+  games: GameShowcase[];
 }
 
 const HEADING_ID = "featured-heading";
@@ -51,36 +51,39 @@ export function FeaturedCarousel({ games }: FeaturedCarouselProps) {
           className="group relative grid overflow-hidden rounded-lg bg-panel shadow-strong motion-safe:animate-fade-in lg:grid-cols-3 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-primary-focus"
         >
           <div className="lg:col-span-2">
+            {/* A capa da Steam é pequena para esta área: a primeira captura de tela tem resolução para ela. */}
             <GameCover
-              imageUrl={activeGame.coverImageUrl}
-              sizes="(min-width: 1024px) 66vw, 100vw"
+              imageUrl={activeGame.screenshotUrls[0] ?? activeGame.coverImageUrl}
+              sizes="(min-width: 1152px) 768px, (min-width: 1024px) 66vw, 100vw"
               isAboveTheFold={isInitialSlide}
+              shape="screenshot"
             />
           </div>
 
           <div className="flex flex-col gap-4 p-5 lg:p-6">
             <h3 className="font-display text-x-large text-title lg:text-xx-large">
               <Link
-                href={`/games/${activeGame.slug}`}
+                href={`/games/${activeGame.id}`}
                 className="after:absolute after:inset-0 group-hover:text-primary-focus focus-visible:outline-none"
               >
                 {activeGame.title}
               </Link>
             </h3>
             <p className="text-medium text-subtitle">{activeGame.shortDescription}</p>
-            <ul aria-label="Gêneros" className="flex flex-wrap gap-2">
-              {activeGame.genres.map((genre) => (
-                <li
-                  key={genre.id}
-                  className="rounded-md border border-tag px-2 text-small text-tag"
-                >
-                  {genre.name}
-                </li>
-              ))}
-            </ul>
+            {activeGame.genres.length > 0 && (
+              <ul aria-label="Gêneros" className="flex flex-wrap gap-2">
+                {activeGame.genres.map((genre) => (
+                  <li
+                    key={genre.id}
+                    className="rounded-md border border-tag px-2 text-small text-tag"
+                  >
+                    {genre.name}
+                  </li>
+                ))}
+              </ul>
+            )}
             <PriceTag
-              priceInCents={activeGame.priceInCents}
-              discountPercent={activeGame.discountPercent}
+              price={activeGame}
               className="mt-auto self-end"
             />
           </div>

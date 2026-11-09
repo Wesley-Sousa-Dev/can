@@ -6,8 +6,6 @@ import { useEffect, useId, useRef, useState, type FocusEvent, type PointerEvent 
 
 import { GameCover } from "@/components/game/GameCover";
 import { PriceTag } from "@/components/game/PriceTag";
-import { formatShortDate } from "@/lib/dates";
-import { formatCount, getReviewLabel } from "@/lib/reviews";
 import { formatConjunctionList } from "@/lib/text";
 import type { GameShowcase } from "@/types/game";
 
@@ -72,19 +70,19 @@ const TAGS_SHOWN = 4;
 // Frase com o que a versão ampliada mostra, para o leitor de tela ouvir as
 // mesmas informações sem precisar do mouse.
 function describeExpandedContent(game: GameShowcase): string {
-  const sentences = [`Marcadores: ${formatConjunctionList(game.tags.slice(0, TAGS_SHOWN))}.`];
-  if (game.reviewSummary) {
-    sentences.push(
-      `Análises: ${getReviewLabel(game.reviewSummary)}, ${formatCount(game.reviewSummary.totalReviews)}.`,
-    );
+  const sentences: string[] = [];
+  if (game.genres.length > 0) {
+    sentences.push(`Gêneros: ${formatConjunctionList(game.genres.map((genre) => genre.name))}.`);
   }
-  sentences.push(`Lançamento: ${formatShortDate(game.releaseDate)}.`);
+  if (game.tags.length > 0) {
+    sentences.push(`Marcadores: ${formatConjunctionList(game.tags.slice(0, TAGS_SHOWN))}.`);
+  }
   return sentences.join(" ");
 }
 
 // Cápsula de jogo como a da Steam: capa, nome e preço. Ao passar o mouse ou
 // focar pelo teclado, ela cresce no lugar e mostra uma captura de tela, os
-// marcadores, as análises e a data de lançamento.
+// gêneros e os marcadores.
 // Segue a WCAG 1.4.13: o mouse pode passear pela versão ampliada, o Esc a
 // fecha e ela só some quando o mouse ou o foco saem.
 export function GameCapsule({ game, size }: GameCapsuleProps) {
@@ -92,6 +90,7 @@ export function GameCapsule({ game, size }: GameCapsuleProps) {
   const timerRef = useRef<number | null>(null);
   const descriptionId = useId();
   const sizeSettings = CAPSULE_SIZE_SETTINGS[size];
+  const expandedDescription = describeExpandedContent(game);
 
   function clearTimer() {
     if (timerRef.current !== null) {
@@ -163,8 +162,8 @@ export function GameCapsule({ game, size }: GameCapsuleProps) {
       {/* A versão ampliada fica dentro do link: assim, quem recebe o foco é o
           próprio cartão ampliado, e nada cobre o elemento focado (WCAG 2.4.11). */}
       <Link
-        href={`/games/${game.slug}`}
-        aria-describedby={descriptionId}
+        href={`/games/${game.id}`}
+        aria-describedby={expandedDescription ? descriptionId : undefined}
         onFocus={handleFocus}
         onBlur={collapse}
         className="group relative flex h-full flex-col rounded-lg bg-background-base shadow-medium transition-shadow hover:shadow-strong"
@@ -175,8 +174,7 @@ export function GameCapsule({ game, size }: GameCapsuleProps) {
         <div className={`mt-auto flex px-3 py-2 ${sizeSettings.footerClassName}`}>
           <span className={`font-medium text-title ${sizeSettings.titleClassName}`}>{game.title}</span>
           <PriceTag
-            priceInCents={game.priceInCents}
-            discountPercent={game.discountPercent}
+            price={game}
             className={sizeSettings.priceClassName}
           />
         </div>
@@ -205,7 +203,7 @@ export function GameCapsule({ game, size }: GameCapsuleProps) {
                 preço fica nos 3/5 da direita para nunca passar por baixo da capa. */}
             <div className="flex min-h-12 items-center justify-end bg-background-base px-3 py-2">
               <div className="flex w-3/5 justify-end">
-                <PriceTag priceInCents={game.priceInCents} discountPercent={game.discountPercent} />
+                <PriceTag price={game} />
               </div>
             </div>
             <div className="absolute bottom-0 left-0 w-2/5 overflow-hidden rounded-tr-md shadow-strong">
@@ -222,22 +220,18 @@ export function GameCapsule({ game, size }: GameCapsuleProps) {
                 </li>
               ))}
             </ul>
-            {game.reviewSummary && (
-              <span className="text-small text-subtitle">
-                <span className="font-medium text-title">{getReviewLabel(game.reviewSummary)}</span> (
-                {formatCount(game.reviewSummary.totalReviews)} análises)
-              </span>
+            {game.genres.length > 0 && (
+              <span className="text-small text-subtitle">{game.genres.map((genre) => genre.name).join(" · ")}</span>
             )}
-            <span className="text-small text-subtitle">
-              Lançamento: <time dateTime={game.releaseDate}>{formatShortDate(game.releaseDate)}</time>
-            </span>
           </div>
         </div>
       </Link>
 
-      <span id={descriptionId} hidden>
-        {describeExpandedContent(game)}
-      </span>
+      {expandedDescription && (
+        <span id={descriptionId} hidden>
+          {expandedDescription}
+        </span>
+      )}
     </div>
   );
 }

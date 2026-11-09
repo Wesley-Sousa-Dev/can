@@ -3,18 +3,23 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useState, type FocusEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type FocusEvent, type FormEvent, type KeyboardEvent } from "react";
 
 import { GameCover } from "@/components/game/GameCover";
 import { PriceTag } from "@/components/game/PriceTag";
-import { isGameReleased } from "@/lib/gameAvailability";
-import { MINIMUM_SUGGESTION_LENGTH, suggestGames } from "@/lib/gameCatalog";
+import { MINIMUM_SUGGESTION_LENGTH } from "@/lib/gameCatalog";
 import { normalizeForSearch } from "@/lib/text";
-import type { GameListing } from "@/types/game";
+import { suggestStoreGames } from "@/services/gameService";
+import type { GameShowcase } from "@/types/game";
 
-interface StoreSearchProps {
-  games: GameListing[];
+interface SuggestionResults {
+  /** Termo que a API respondeu. Enquanto ele difere do digitado, uma busca está a caminho. */
+  searchTerm: string;
+  games: GameShowcase[];
 }
+
+/** Espera a pessoa parar de digitar antes de chamar a API. */
+const SUGGESTION_DELAY_MS = 300;
 
 function buildSearchUrl(searchTerm: string): string {
   const trimmedSearchTerm = searchTerm.trim();
@@ -24,17 +29,47 @@ function buildSearchUrl(searchTerm: string): string {
 // Busca da loja com sugestões, como a da Steam: os jogos aparecem enquanto a
 // pessoa digita, antes de enviar. Segue o padrão "combobox" do W3C (APG):
 // o foco fica no campo, e as setas destacam uma sugestão por aria-activedescendant.
-export function StoreSearch({ games }: StoreSearchProps) {
+// As sugestões vêm da API (GET /games?search=), uma busca por pausa na digitação.
+export function StoreSearch() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [results, setResults] = useState<SuggestionResults>({ searchTerm: "", games: [] });
   const listboxId = useId();
   const popupHeadingId = useId();
 
-  const suggestions = suggestGames(games, searchTerm);
-  const isPopupVisible = isPopupOpen && suggestions.length > 0;
+  const trimmedSearchTerm = searchTerm.trim();
   const hasSearchTermForSuggestions = normalizeForSearch(searchTerm).length >= MINIMUM_SUGGESTION_LENGTH;
+  const isWaitingForSuggestions = hasSearchTermForSuggestions && results.searchTerm !== trimmedSearchTerm;
+  // As sugestões antigas somem assim que o termo muda, para nenhuma seta escolher um jogo que não combina mais.
+  const suggestions = hasSearchTermForSuggestions && !isWaitingForSuggestions ? results.games : [];
+  const isPopupVisible = isPopupOpen && suggestions.length > 0;
+
+  useEffect(() => {
+    if (!hasSearchTermForSuggestions || results.searchTerm === trimmedSearchTerm) {
+      return;
+    }
+    let isCurrentSearch = true;
+    const timeoutId = window.setTimeout(() => {
+      suggestStoreGames(trimmedSearchTerm)
+        .then((games) => {
+          if (isCurrentSearch) {
+            setResults({ searchTerm: trimmedSearchTerm, games });
+          }
+        })
+        .catch(() => {
+          // Sem sugestões, o Enter continua levando à pesquisa completa.
+          if (isCurrentSearch) {
+            setResults({ searchTerm: trimmedSearchTerm, games: [] });
+          }
+        });
+    }, SUGGESTION_DELAY_MS);
+    return () => {
+      isCurrentSearch = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [hasSearchTermForSuggestions, trimmedSearchTerm, results.searchTerm]);
   const getOptionId = (index: number) => `${listboxId}-option-${index}`;
 
   function closePopup() {
@@ -75,7 +110,7 @@ export function StoreSearch({ games }: StoreSearchProps) {
     if (event.key === "Enter" && isPopupVisible && activeIndex >= 0) {
       event.preventDefault();
       closePopup();
-      router.push(`/games/${suggestions[activeIndex].slug}`);
+      router.push(`/games/${suggestions[activeIndex].id}`);
     }
   }
 
@@ -97,6 +132,9 @@ export function StoreSearch({ games }: StoreSearchProps) {
   function describeSuggestions(): string {
     if (!isPopupOpen || !hasSearchTermForSuggestions) {
       return "";
+    }
+    if (isWaitingForSuggestions) {
+      return "Buscando jogos...";
     }
     if (suggestions.length === 0) {
       return "Nenhum jogo encontrado. Aperte Enter para ver a pesquisa completa.";
@@ -163,7 +201,7 @@ export function StoreSearch({ games }: StoreSearchProps) {
                     chega aqui pelas setas, sem passar cada sugestão no Tab. */}
                 <Link
                   id={getOptionId(index)}
-                  href={`/games/${game.slug}`}
+                  href={`/games/${game.id}`}
                   role="option"
                   aria-selected={isActive}
                   tabIndex={-1}
@@ -176,11 +214,7 @@ export function StoreSearch({ games }: StoreSearchProps) {
                   </div>
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="text-medium font-medium text-title">{game.title}</span>
-                    {isGameReleased(game) ? (
-                      <PriceTag priceInCents={game.priceInCents} discountPercent={game.discountPercent} />
-                    ) : (
-                      <span className="text-small text-subtitle">Em breve</span>
-                    )}
+                    <PriceTag price={game} />
                   </div>
                 </Link>
               </li>

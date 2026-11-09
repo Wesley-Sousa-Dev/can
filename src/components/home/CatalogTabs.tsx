@@ -12,7 +12,6 @@ export interface CatalogTab {
   label: string;
   games: Game[];
   emptyMessage: string;
-  showReleaseDate?: boolean;
 }
 
 interface CatalogTabsProps {
@@ -92,7 +91,7 @@ export function CatalogTabs({ tabs }: CatalogTabsProps) {
               <ul className="flex flex-col gap-3">
                 {tab.games.map((game) => (
                   <li key={game.id}>
-                    <GameListItem game={game} showReleaseDate={tab.showReleaseDate} />
+                    <GameListItem game={game} />
                   </li>
                 ))}
               </ul>

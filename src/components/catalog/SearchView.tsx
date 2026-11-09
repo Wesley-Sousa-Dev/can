@@ -16,13 +16,25 @@ import {
   type CatalogFilters,
   type CatalogSortOrder,
 } from "@/lib/gameCatalog";
+import { searchStoreCatalog } from "@/services/gameService";
 import type { GameShowcase, GenreId } from "@/types/game";
 
 interface SearchViewProps {
-  games: GameShowcase[];
+  /** Resultados do termo inicial, já buscados pelo servidor. */
+  initialGames: GameShowcase[];
   initialSearchTerm: string;
   initialGenreIds: GenreId[];
 }
+
+interface SearchResults {
+  /** Termo que a API respondeu. Enquanto ele difere do digitado, uma busca está a caminho. */
+  searchTerm: string;
+  games: GameShowcase[];
+  hasFailed: boolean;
+}
+
+/** Espera a pessoa parar de digitar antes de chamar a API. */
+const SEARCH_DELAY_MS = 400;
 
 function describeResults(count: number, searchTerm: string): string {
   const resultCount = count === 1 ? "1 resultado" : `${count} resultados`;
@@ -45,16 +57,63 @@ function buildSearchPageUrl({ searchTerm, genreIds }: CatalogFilters): string {
 
 // Pesquisa completa da loja: os resultados mudam enquanto a pessoa digita
 // ou marca um filtro, e o endereço da página acompanha.
-export function SearchView({ games, initialSearchTerm, initialGenreIds }: SearchViewProps) {
+export function SearchView({ initialGames, initialSearchTerm, initialGenreIds }: SearchViewProps) {
   const [filters, setFilters] = useState<CatalogFilters>({
     ...DEFAULT_CATALOG_FILTERS,
     searchTerm: initialSearchTerm,
     genreIds: initialGenreIds,
   });
   const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("relevance");
+  const [results, setResults] = useState<SearchResults>({
+    searchTerm: initialSearchTerm.trim(),
+    games: initialGames,
+    hasFailed: false,
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const visibleGames = sortCatalog(filterCatalog(games, filters), sortOrder, filters.searchTerm);
+  const trimmedSearchTerm = filters.searchTerm.trim();
+  const isSearching = trimmedSearchTerm !== results.searchTerm;
+  // A API já buscou pelo nome; aqui entram só os filtros do painel e a ordem.
+  const visibleGames = sortCatalog(
+    filterCatalog(results.games, { ...filters, searchTerm: "" }),
+    sortOrder,
+    results.searchTerm,
+  );
+
+  // GET /games?search= a cada termo novo, depois de uma pausa na digitação.
+  useEffect(() => {
+    if (trimmedSearchTerm === results.searchTerm) {
+      return;
+    }
+    let isCurrentSearch = true;
+    const timeoutId = window.setTimeout(() => {
+      searchStoreCatalog(trimmedSearchTerm)
+        .then((games) => {
+          if (isCurrentSearch) {
+            setResults({ searchTerm: trimmedSearchTerm, games, hasFailed: false });
+          }
+        })
+        .catch(() => {
+          if (isCurrentSearch) {
+            setResults({ searchTerm: trimmedSearchTerm, games: [], hasFailed: true });
+          }
+        });
+    }, SEARCH_DELAY_MS);
+    return () => {
+      isCurrentSearch = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [trimmedSearchTerm, results.searchTerm]);
+
+  function describeStatus(): string {
+    if (isSearching) {
+      return "Buscando...";
+    }
+    if (results.hasFailed) {
+      return "Não foi possível buscar agora";
+    }
+    return describeResults(visibleGames.length, results.searchTerm);
+  }
 
   // replaceState troca o endereço sem recarregar a página nem criar uma entrada
   // nova no histórico a cada letra digitada.
@@ -80,9 +139,9 @@ export function SearchView({ games, initialSearchTerm, initialGenreIds }: Search
         <SearchField
           ref={searchInputRef}
           id="search-page-term"
-          label="Buscar por nome, marcador, gênero ou estúdio"
+          label="Buscar pelo nome do jogo"
           value={filters.searchTerm}
-          placeholder="Ex.: corrida"
+          placeholder="Ex.: portal"
           onChange={(searchTerm) => setFilters({ ...filters, searchTerm })}
           className="flex-1"
         />
@@ -100,7 +159,7 @@ export function SearchView({ games, initialSearchTerm, initialGenreIds }: Search
         <CatalogFiltersPanel
           idPrefix="search-page"
           filters={filters}
-          genreCounts={countGamesByGenre(games)}
+          genreCounts={countGamesByGenre(results.games)}
           genreLegend="Gêneros"
           onFiltersChange={setFilters}
         />
@@ -111,19 +170,28 @@ export function SearchView({ games, initialSearchTerm, initialGenreIds }: Search
           </h2>
           {/* A contagem é anunciada sozinha a cada mudança na busca ou nos filtros. */}
           <p role="status" className="text-small font-medium uppercase tracking-wide text-subtitle">
-            {describeResults(visibleGames.length, filters.searchTerm)}
+            {describeStatus()}
           </p>
 
-          {visibleGames.length > 0 ? (
+          {results.hasFailed && !isSearching ? (
+            <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6">
+              <SearchX aria-hidden="true" className="size-8 text-error-text" />
+              <h3 className="font-display text-x-large text-title">O servidor da Can não respondeu</h3>
+              <p className="text-medium text-subtitle">Confira sua conexão e tente buscar de novo daqui a pouco.</p>
+            </div>
+          ) : visibleGames.length > 0 ? (
             <ul className="flex flex-col gap-3">
               {visibleGames.map((game) => (
                 <li key={game.id}>
-                  <GameListItem game={game} showReleaseDate />
+                  <GameListItem game={game} />
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6">
+            <div
+              aria-busy={isSearching}
+              className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6"
+            >
               <SearchX aria-hidden="true" className="size-8 text-primary-focus" />
               <h3 className="font-display text-x-large text-title">Nenhum jogo encontrado</h3>
               <p className="text-medium text-subtitle">
