@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 import { getPaymentMethodLabel } from "@/components/checkout/paymentMethods";
 import { GameCover } from "@/components/game/GameCover";
-import { calculatePriceTotals, formatPriceInCents } from "@/lib/pricing";
+import { formatPriceInCents } from "@/lib/pricing";
 import type { Game } from "@/types/game";
 import type { Order } from "@/types/order";
 
@@ -35,7 +35,8 @@ function OrderDetail({ term, value }: OrderDetailProps) {
 }
 
 export function PurchaseConfirmation({ order, games, nickname }: PurchaseConfirmationProps) {
-  const { totalInCents } = calculatePriceTotals(games);
+  // O total exibido é o que a API cobrou no pedido.
+  const totalInCents = order.totalInCents;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">

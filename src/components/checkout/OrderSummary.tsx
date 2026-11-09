@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { calculateDiscountedPriceInCents, calculatePriceTotals, formatPriceInCents } from "@/lib/pricing";
+import { calculatePriceTotals, formatPriceInCents } from "@/lib/pricing";
 import { formatGameCount } from "@/lib/text";
 import type { Game } from "@/types/game";
 
@@ -30,7 +30,7 @@ export function OrderSummary({ headingId, games, showGameList = false, children 
             <li key={game.id} className="flex justify-between gap-4 text-small">
               <span className="text-title">{game.title}</span>
               <span className="shrink-0 text-subtitle">
-                {formatPriceInCents(calculateDiscountedPriceInCents(game.priceInCents, game.discountPercent))}
+                {game.currentPriceInCents === null ? "Preço indisponível" : formatPriceInCents(game.currentPriceInCents)}
               </span>
             </li>
           ))}

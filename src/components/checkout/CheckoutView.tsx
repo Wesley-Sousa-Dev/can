@@ -5,23 +5,20 @@ import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 
+import { CollectionPageState } from "@/components/account/CollectionPageState";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { FIRST_PAYMENT_OPTION_ID, PaymentMethodField } from "@/components/checkout/PaymentMethodField";
 import { PurchaseConfirmation } from "@/components/checkout/PurchaseConfirmation";
 import { ErrorSummary, type ErrorSummaryItem } from "@/components/forms/ErrorSummary";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { useGameCollection } from "@/hooks/useGameCollection";
-import { useSession } from "@/hooks/useSession";
+import { useCollectionGames } from "@/hooks/useCollectionGames";
 import { withRedirect } from "@/lib/safeRedirect";
+import { ApiError } from "@/services/apiClient";
 import { placeOrder } from "@/services/checkoutService";
 import { cartCollection } from "@/services/userCollections";
 import type { Game } from "@/types/game";
 import type { Order, PaymentMethod } from "@/types/order";
-
-interface CheckoutViewProps {
-  games: Game[];
-}
 
 interface CompletedPurchase {
   order: Order;
@@ -52,8 +49,8 @@ function SignInRequired() {
       <div className="flex max-w-2xl flex-col items-start gap-4">
         <h1 className="font-display text-xx-large text-title sm:text-xxx-large">Entre para finalizar a compra</h1>
         <p className="text-medium text-title">
-          Os jogos comprados vão para a biblioteca da sua conta. Seu carrinho continua salvo enquanto
-          você entra.
+          O carrinho e os jogos comprados ficam na sua conta. Entre para escolher os jogos e finalizar a
+          compra.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link href={withRedirect("/login", checkoutPath)} className={PRIMARY_LINK_CLASS}>
@@ -88,9 +85,14 @@ function EmptyCheckout() {
   );
 }
 
-export function CheckoutView({ games }: CheckoutViewProps) {
-  const session = useSession();
-  const cart = useGameCollection(cartCollection);
+// O pedido recusado pela API (ex.: carrinho mudou em outra aba) traz o motivo;
+// uma falha de rede usa a mensagem padrão.
+function describeOrderFailure(error: unknown): string {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500 ? error.message : ORDER_FAILED_MESSAGE;
+}
+
+export function CheckoutView() {
+  const { session, games: cartGames, viewState, retry } = useCollectionGames(cartCollection);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
@@ -110,21 +112,24 @@ export function CheckoutView({ games }: CheckoutViewProps) {
     );
   }
 
-  // A sessão e o carrinho moram no navegador: no HTML do servidor ainda não existem.
-  if (session.status === "loading") {
-    return (
-      <p aria-busy="true" className="mx-auto max-w-6xl px-4 py-16 text-medium text-subtitle sm:px-6">
-        Carregando...
-      </p>
-    );
-  }
-
-  if (session.status === "signed-out") {
+  if (viewState === "signed-out") {
     return <SignInRequired />;
   }
 
-  const gamesById = new Map(games.map((game) => [game.id, game]));
-  const cartGames = cart.gameIds.flatMap((gameId) => gamesById.get(gameId) ?? []);
+  // O carrinho vem da API depois que a página abre. Durante a compra, a lista
+  // guardada em gamesBeingPurchased segura a tela enquanto o carrinho recarrega.
+  if (viewState !== "ready" && gamesBeingPurchased === null) {
+    return (
+      <CollectionPageState
+        viewState={viewState}
+        title="Finalizar compra"
+        loadingText="Carregando seu carrinho..."
+        signInText=""
+        onRetry={retry}
+      />
+    );
+  }
+
   const checkoutGames = gamesBeingPurchased ?? cartGames;
   const isSubmitting = gamesBeingPurchased !== null;
 
@@ -162,11 +167,11 @@ export function CheckoutView({ games }: CheckoutViewProps) {
       // O conteúdo da página muda por completo, então o título da aba muda junto (WCAG 2.4.2).
       document.title = "Compra concluída | Can";
       setCompletedPurchase({ order, games: cartGames });
-    } catch {
-      // Com a API, uma recusa do parceiro de pagamento ou uma falha de rede chega aqui.
+    } catch (error) {
+      // Uma recusa da API ou uma falha de rede chega aqui. Nada foi cobrado.
       flushSync(() => {
         setGamesBeingPurchased(null);
-        setOrderError(ORDER_FAILED_MESSAGE);
+        setOrderError(describeOrderFailure(error));
       });
       errorSummaryRef.current?.focus();
     }
