@@ -159,11 +159,19 @@ As coleções mudam na tela na hora (atualização otimista) e voltam ao que era
 
 ### Deploy
 
-O site e a API rodam em contêineres Docker num servidor caseiro, gerenciados pelo Portainer, e chegam à internet pelo Cloudflare Tunnel (`cloudflared`), sem abrir portas no roteador.
+O site e a API rodam em contêineres Docker num servidor caseiro, gerenciados pelo Portainer, e chegam à internet pelo Cloudflare Tunnel (`cloudflared`), sem abrir portas no roteador. O `docker-compose.yml` sobe três contêineres:
+
+- `front`: vem do `Dockerfile` deste repositório, com o Next no modo `standalone`;
+- `api`: vem do `Dockerfile` do `can-api`;
+- `cloudflared`: o túnel.
+
+Regras que valem para esse ambiente:
 
 - O navegador chama a API diretamente, então ela também precisa de um endereço público no túnel.
-- O `FRONTEND_ORIGIN` da API precisa incluir o endereço público do front, senão o CORS bloqueia as chamadas.
-- O Next grava o `NEXT_PUBLIC_API_URL` no código durante o build. Por isso, o endereço público da API precisa ser passado no build da imagem (`docker build`). Mudar a variável só no contêiner, pelo Portainer, não tem efeito.
+- O servidor do Next fala com a API pela rede interna do Docker, pelo `API_INTERNAL_URL` (`http://api:4000/api`). Essa variável é lida ao rodar; sem ela, o servidor usa o endereço público.
+- O Next grava o `NEXT_PUBLIC_API_URL` no código durante o build. Por isso, o endereço público da API entra como argumento do build da imagem. Mudar a variável só no contêiner, pelo Portainer, não tem efeito.
+- O `FRONTEND_ORIGIN` da API precisa ser o endereço público do front, senão o CORS bloqueia as chamadas.
+- A API roda com `TRUST_PROXY=1`. Assim, o limite de requisições conta o IP de cada usuário, e não o do `cloudflared`.
 
 ## Formulários
 

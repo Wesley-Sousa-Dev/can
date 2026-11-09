@@ -1,0 +1,13 @@
+# Arquivos que não entram no contexto do build da imagem: dependências e builds
+# locais, variáveis de ambiente e arquivos que o site não usa.
+node_modules
+.next
+.git
+.env*
+design
+docs-aula
+*.tsbuildinfo
+next-env.d.ts
+*.md
+Dockerfile
+docker-compose.yml

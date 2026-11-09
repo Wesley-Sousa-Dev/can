@@ -1,0 +1,49 @@
+# Stack de produção da Can: front-end, Can Games API e Cloudflare Tunnel.
+#
+# Variáveis do stack (no Portainer, em "Environment variables"; no terminal, num
+# arquivo .env ao lado deste, que fica fora do Git):
+#   PUBLIC_FRONTEND_URL  endereço público do site. Ex.: https://can.exemplo.com
+#   PUBLIC_API_URL       endereço público da API, terminando em /api. Ex.: https://can-api.exemplo.com/api
+#   JWT_SECRET           segredo com que a API assina os tokens
+#   TUNNEL_TOKEN         token do túnel, copiado do painel Zero Trust da Cloudflare
+#   API_SOURCE           (opcional) origem do código da API. Padrão: branch main do repositório can-api
+#
+# Nenhuma porta é aberta no servidor: o acesso de fora chega só pelo túnel. No painel
+# da Cloudflare, os endereços públicos do túnel apontam para http://front:3000 e http://api:4000.
+
+services:
+  front:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Defina PUBLIC_API_URL}
+    environment:
+      # O servidor do Next fala com a API pela rede interna, sem dar a volta pelo túnel.
+      API_INTERNAL_URL: http://api:4000/api
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ${API_SOURCE:-https://github.com/Ana72Lu/can-api.git#main}
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      FRONTEND_ORIGIN: ${PUBLIC_FRONTEND_URL:?Defina PUBLIC_FRONTEND_URL}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      # Um proxy na frente da API (o cloudflared): o limite de requisições vale por usuário.
+      TRUST_PROXY: "1"
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Defina TUNNEL_TOKEN}
+    depends_on:
+      - front
+      - api
+    restart: unless-stopped

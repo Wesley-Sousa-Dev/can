@@ -54,10 +54,13 @@ Como a API armazena os dados em memória, as contas cadastradas são perdidas se
 
 Em produção, o front-end e a API são executados em contêineres Docker em um servidor caseiro, gerenciados pelo Portainer. A publicação na internet é feita pelo Cloudflare Tunnel: o `cloudflared`, em execução no servidor, mantém uma conexão de saída com a Cloudflare, que entrega o site aos usuários com HTTPS. Dessa forma, não é necessário abrir portas no roteador nem expor o endereço IP do servidor.
 
-Como as operações da conta são feitas pelo navegador, a API também precisa de um endereço público no túnel. Além disso, as variáveis de ambiente devem ser configuradas da seguinte forma:
+| Contêiner | Imagem | Função |
+|---|---|---|
+| `front` | `Dockerfile` deste repositório | Front-end em Next.js, no modo `standalone`, na porta 3000. |
+| `api` | `Dockerfile` do repositório `can-api` | Can Games API, na porta 4000. |
+| `cloudflared` | `cloudflare/cloudflared` | Túnel que publica o front-end e a API na internet. |
 
-- **`NEXT_PUBLIC_API_URL`:** deve conter o endereço público da API, terminando em `/api`. O Next.js grava as variáveis `NEXT_PUBLIC_` no código durante o build. Por isso, o valor deve ser informado na construção da imagem (`docker build`), e não apenas nas variáveis do contêiner no Portainer.
-- **`FRONTEND_ORIGIN`:** no `.env` da API, deve incluir o endereço público do front-end, para que o CORS libere as requisições feitas pelo navegador.
+O navegador acessa o front-end e a API pelos endereços públicos do túnel. Já o servidor do Next.js se comunica com a API pela rede interna do Docker (`http://api:4000/api`). As instruções estão na seção [Deploy no servidor](#-deploy-no-servidor).
 
 ---
 
@@ -198,11 +201,14 @@ can/
 │   ├── lib/                # Regras de negócio: preços, filtros, ordenação, datas e validação
 │   ├── services/           # Requisições à API e conversão dos dados
 │   └── types/              # Tipos dos dados da API e da interface
+├── .dockerignore           # Arquivos que ficam fora da imagem Docker
 ├── .env.example            # Modelo da variável NEXT_PUBLIC_API_URL
 ├── .gitignore
 ├── AGENTS.md               # Manual de identidade visual e convenções do código
+├── docker-compose.yml      # Stack de produção: front-end, API e Cloudflare Tunnel
+├── Dockerfile              # Imagem de produção do front-end
 ├── eslint.config.mjs
-├── next.config.ts          # Configuração do Next.js e liberação das imagens da Steam
+├── next.config.ts          # Configuração do Next.js: modo standalone e imagens da Steam
 ├── package.json
 ├── package-lock.json
 ├── postcss.config.mjs
@@ -445,6 +451,74 @@ Para utilizar a lista de desejos, o carrinho e a biblioteca, cadastre uma conta 
 
 ---
 
+## 🐳 Deploy no servidor
+
+O arquivo `docker-compose.yml` deste repositório constrói as imagens do front-end e da API e inicia os contêineres `front`, `api` e `cloudflared`. Nenhuma porta é publicada no servidor: o acesso externo é feito exclusivamente pelo túnel.
+
+### Variáveis do stack
+
+| Variável | Descrição | Exemplo |
+|---|---|---|
+| `PUBLIC_FRONTEND_URL` | Endereço público do site, sem barra no final. É repassado à API como `FRONTEND_ORIGIN`, para liberar o CORS. | `https://can.exemplo.com` |
+| `PUBLIC_API_URL` | Endereço público da API, terminando em `/api`. | `https://can-api.exemplo.com/api` |
+| `JWT_SECRET` | Segredo utilizado pela API para assinar os tokens. | Valor aleatório, gerado como no README da API |
+| `TUNNEL_TOKEN` | Token do túnel, gerado no painel Zero Trust da Cloudflare. | — |
+| `API_SOURCE` | Opcional. Origem do código da API. | Padrão: `https://github.com/Ana72Lu/can-api.git#main` |
+
+**Atenção:** o Next.js grava as variáveis `NEXT_PUBLIC_` no código durante o build. Por isso, `PUBLIC_API_URL` é enviado como argumento do build da imagem do front-end (`NEXT_PUBLIC_API_URL`). Após alterar esse endereço, é necessário reconstruir a imagem; alterar apenas a variável do contêiner não tem efeito.
+
+Os domínios devem ter um único nível abaixo do domínio principal, como `can-api.exemplo.com`. O certificado gratuito da Cloudflare não cobre endereços como `api.can.exemplo.com`.
+
+### 1. Criar o túnel na Cloudflare
+
+No painel Zero Trust da Cloudflare, crie um túnel do tipo `cloudflared` e copie o token exibido no comando de instalação. Em seguida, cadastre dois endereços públicos no túnel:
+
+| Endereço público | Serviço |
+|---|---|
+| Domínio do site (ex.: `can.exemplo.com`) | `http://front:3000` |
+| Domínio da API (ex.: `can-api.exemplo.com`) | `http://api:4000` |
+
+Os nomes `front` e `api` correspondem aos serviços do `docker-compose.yml`. O `cloudflared` os localiza pela rede interna do stack.
+
+### 2. Criar o stack no Portainer
+
+1. Em *Stacks*, clique em *Add stack* e escolha o método *Repository*.
+2. Informe o endereço deste repositório, a branch a ser publicada e o caminho `docker-compose.yml`.
+3. Cadastre as variáveis do stack em *Environment variables*.
+4. Clique em *Deploy the stack*. O Portainer constrói as imagens e inicia os três contêineres.
+
+A imagem da API é construída a partir da branch `main` do repositório `can-api`, que deve conter o `Dockerfile` da API.
+
+### Alternativa pelo terminal
+
+O stack também pode ser iniciado diretamente no servidor, com os dois repositórios clonados lado a lado:
+
+```bash
+git clone https://github.com/Wesley-Sousa-Dev/can.git
+git clone https://github.com/Ana72Lu/can-api.git
+cd can
+```
+
+Crie um arquivo `.env` na pasta `can`, ao lado do `docker-compose.yml`:
+
+```env
+PUBLIC_FRONTEND_URL=https://can.exemplo.com
+PUBLIC_API_URL=https://can-api.exemplo.com/api
+JWT_SECRET=COLE_AQUI_UM_SEGREDO_FORTE
+TUNNEL_TOKEN=COLE_AQUI_O_TOKEN_DO_TUNEL
+API_SOURCE=../can-api
+```
+
+Em seguida, construa as imagens e inicie os contêineres:
+
+```bash
+docker compose up -d --build
+```
+
+Para publicar novos commits, use *Pull and redeploy* no stack do Portainer ou, pelo terminal, execute `git pull` nos dois repositórios e repita o comando acima. Como a API armazena os dados em memória, as contas são perdidas sempre que o contêiner da API é recriado.
+
+---
+
 ## 📜 Comandos disponíveis
 
 | Comando | Descrição |
@@ -454,3 +528,4 @@ Para utilizar a lista de desejos, o carrinho e a biblioteca, cadastre uma conta 
 | `npm run build` | Gera o build de produção e verifica os tipos. |
 | `npm start` | Inicia o build de produção em `http://localhost:3000`. |
 | `npm run lint` | Verifica problemas no código com ESLint. |
+| `docker compose up -d --build` | Constrói as imagens e inicia o stack de produção no servidor. |

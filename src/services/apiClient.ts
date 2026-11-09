@@ -4,7 +4,17 @@ import type { ApiErrorBody, ApiResponse } from "@/types/api";
 // rota exige login e transforma qualquer falha em um ApiError com a mensagem
 // da própria API, para a interface mostrar ao usuário.
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
+// O navegador só alcança a API pelo endereço público. Já o servidor do Next, no Docker,
+// fala com ela pela rede interna (API_INTERNAL_URL), sem dar a volta pela internet e
+// pelo túnel. Essa variável é lida ao rodar, não no build, e não existe no navegador.
+function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return process.env.API_INTERNAL_URL || PUBLIC_API_BASE_URL;
+  }
+  return PUBLIC_API_BASE_URL;
+}
 
 /** Quanto tempo o servidor do Next guarda as listas de jogos antes de pedir de novo. */
 export const CATALOG_CACHE_SECONDS = 600;
@@ -58,7 +68,7 @@ export async function requestApi<TData>(path: string, options: ApiRequestOptions
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${getApiBaseUrl()}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
