@@ -20,8 +20,8 @@ export function SiteFooter() {
           <Logo />
           <p className="mt-3 text-small text-subtitle">
             A Can é uma loja de jogos fictícia, criada para a disciplina de
-            Programação para Interface de Usuário da Unijuí. Jogos, estúdios e
-            preços são inventados.
+            Programação para Interface de Usuário da Unijuí. Jogos e preços vêm
+            da Steam e da CheapShark; as compras são simuladas e nada é cobrado.
           </p>
         </div>
 

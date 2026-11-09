@@ -121,35 +121,41 @@ O código segue as três camadas vistas na Aula 3:
 | ------------ | --------------------------------------------- | ---------------------------------------------- |
 | Apresentação | `src/app/`, `src/components/`, `src/hooks/`   | Telas, componentes e hooks React               |
 | Negócio      | `src/services/`, `src/lib/`                   | Regras: filtros, ordenação, preços, datas      |
-| Dados        | `src/data/` (mock), depois a API REST         | Origem dos dados                               |
+| Dados        | Can Games API (REST) e `src/data/`            | Origem dos dados                               |
 
-Os componentes nunca leem `src/data/` diretamente: sempre passam por `src/services/`. Quando a API ficar pronta, estas são as funções que trocam o mock por requisições HTTP:
+Os componentes nunca chamam a API diretamente: sempre passam por `src/services/`. A API é o repositório `can-api` (Node + Express), que busca as ofertas na CheapShark e os dados dos jogos na Steam. O endereço dela fica na variável `NEXT_PUBLIC_API_URL` (veja `.env.example`; na Vercel, cadastre a mesma variável no projeto). O `src/services/apiClient.ts` monta as requisições, envia o token e transforma qualquer falha em `ApiError`, com a mensagem da própria API.
 
-| Função ou objeto                          | Hoje                         | Com a API                          |
-| ----------------------------------------- | ---------------------------- | ---------------------------------- |
-| `fetchAllGames` (`gameService.ts`)        | `src/data/games.ts`          | `GET /games`                       |
-| `getGameBySlug` (`gameService.ts`)        | `src/data/gameDetails.ts`    | `GET /games/:slug`                 |
-| `getGameListings` (`gameService.ts`)      | `games.ts` + `gameDetails.ts` | `GET /games` com `tags` e `reviewSummary` |
-| `getGameShowcases` (`gameService.ts`)     | `games.ts` + `gameDetails.ts` | `GET /games` com `publisher` e `screenshotUrls` |
-| `getGameShowcasesByGenre` (`gameService.ts`) | `games.ts` + `gameDetails.ts` | `GET /games?genre=:id` |
-| `cartCollection.add` / `.remove`          | `localStorage` (`can:cart`)  | `POST` / `DELETE` no carrinho      |
-| `wishlistCollection.add` / `.remove`      | `localStorage` (`can:wishlist`) | `POST` / `DELETE` na lista de desejos |
-| `wishlistCollection.move`                 | `localStorage` (`can:wishlist`) | `PATCH` na lista de desejos (posição) |
-| `libraryCollection.add` / `.remove`       | `localStorage` (`can:library`) | `POST` / `DELETE` na biblioteca  |
-| `launchGame` (`libraryService.ts`)        | `localStorage` (`can:library`) | `PATCH /library/:gameId` (`lastPlayedAt`) |
-| `registerAccount` (`authService.ts`)      | `localStorage` (`can:accounts`) | `POST /users`                    |
-| `signIn` / `signOut` (`authService.ts`)   | `localStorage` (`can:session`) | `POST` / `DELETE /sessions`      |
-| `updateProfile` (`authService.ts`)        | `localStorage` (`can:accounts`) | `PATCH /users/:id`               |
-| `deleteAccount` (`authService.ts`)        | `localStorage` (`can:accounts`) | `DELETE /users/:id`              |
-| `placeOrder` (`checkoutService.ts`)       | `localStorage` (biblioteca, desejos e carrinho) | `POST /orders`   |
+| Função ou objeto                              | Rota da API                                 |
+| --------------------------------------------- | ------------------------------------------- |
+| `getStoreCatalog` (`gameService.ts`)          | `GET /games?limit=60` (ofertas da loja)     |
+| `getGameShowcasesByGenre` (`gameService.ts`)  | `GET /games?genre=:id`                      |
+| `searchStoreCatalog` / `suggestStoreGames`    | `GET /games?search=:termo&onSale=false`     |
+| `getGameDetails` / `getGamesByIds`            | `GET /games/:id` (id da Steam)              |
+| `cartCollection.add` / `.remove`              | `POST /cart` / `DELETE /cart/:id`           |
+| `wishlistCollection.add` / `.remove`          | `POST /wishlist` / `DELETE /wishlist/:id`   |
+| `wishlistCollection.move`                     | `PATCH /wishlist/:id` (`position`)          |
+| `libraryCollection.reload` e as outras        | `GET /library`, `GET /cart`, `GET /wishlist` |
+| `launchGame` (`libraryService.ts`)            | `PATCH /library/:id` (grava `lastPlayedAt`) |
+| `registerAccount` (`authService.ts`)          | `POST /users`, depois `POST /sessions`      |
+| `signIn` / `signOut` (`authService.ts`)       | `POST /sessions` / `DELETE /sessions`       |
+| sessão ao abrir o site (`sessionStore`)       | `GET /users/me`                             |
+| `updateProfile` / `deleteAccount`             | `PATCH /users/:id` / `DELETE /users/:id`    |
+| `placeOrder` (`checkoutService.ts`)           | `POST /orders`                              |
 
-O formato que a API deve devolver está em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos e as sugestões da busca, `GameShowcase` para as ofertas especiais da loja e as páginas de gênero e de pesquisa e `GameDetails` para a página de um jogo), em `src/types/user.ts` (`UserProfile`, `RegistrationData` e `ProfileChanges`), em `src/types/collection.ts` (`GameCollectionEntry`: o id do jogo, a data em que entrou na coleção e, na biblioteca, a última vez que foi aberto) e em `src/types/order.ts` (`OrderRequest` e `Order`). A ordem dos itens de cada coleção é a ordem do array.
+O formato que a API devolve está em `src/types/api.ts`, e `src/services/gameMapper.ts` o traduz para os tipos da interface, em `src/types/game.ts` (`Game` para listas, `GameListing` para a lista de desejos, `GameShowcase` para as vitrines da loja, dos gêneros e da busca e `GameDetails` para a página de um jogo). Os outros tipos ficam em `src/types/user.ts`, `src/types/collection.ts` e `src/types/order.ts`. A ordem dos itens de cada coleção é a ordem do array.
 
-A busca e os filtros (`src/lib/gameCatalog.ts`) rodam sobre a lista que o servidor já entregou, então as sugestões aparecem sem esperar a rede. Com muitos jogos na API, `searchGames` pode virar `GET /games?search=`.
+Pontos da API que mudam o comportamento do front:
 
-As funções de conta e de pedido esperam 600 ms de propósito (`SIMULATED_NETWORK_DELAY_MS`, em `src/services/simulatedNetwork.ts`), para a interface mostrar o estado "carregando" como faria com a API. A conta de demonstração é `demo` / `Can12345`.
+- **Preços:** o `priceInCents` da API já vem com desconto. No front, `priceInCents` é o preço cheio (de `price.original`) e `currentPriceInCents` é o que se paga. Os dois são nulos quando a fonte não traz o preço em reais; esse jogo aparece como "Preço indisponível" e não pode ser comprado.
+- **Sem data de lançamento nem análises:** a API não consegue ler a maioria das datas da Steam (vêm em português, como "25 out. 2005", e chegam vazias) e não traz as análises em `GET /games/:id`. Por isso o front não mostra nem usa esses dados: não há ordem por lançamento, por avaliação nem "em breve".
+- **Ordem recomendada:** a API não informa vendas nem destaques (`unitsSold` e `isFeatured` são sempre 0 e falso). A ordem em que ela devolve os jogos já é a da CheapShark, pela qualidade da oferta, e é essa a ordem "recomendada" do front: destaques, títulos populares, a aba "Tudo" dos gêneros e os empates da busca. As outras ordens são por desconto, preço e nome.
+- **Gêneros:** só os 6 de `src/data/genres.ts`. A Steam não tem "quebra-cabeça" nem "terror" como gênero.
+- **Coleções exigem login:** a API guarda o carrinho e a lista de desejos de quem não entrou em um único usuário `guest`, compartilhado entre todos os visitantes. Por isso o front só usa as coleções com a conta aberta; sem conta, os botões levam ao login com `?redirectTo=` e a pessoa volta para a mesma página.
+- **Biblioteca:** não aceita `POST` nem `DELETE`. Os jogos só entram por uma compra (`POST /orders`), inclusive os gratuitos, e não saem mais.
+- **Pagamento:** acontece em um parceiro externo (gateway) que não faz parte do projeto, então a API sempre aprova o pedido: põe os jogos na biblioteca, tira da lista de desejos e esvazia o carrinho. O pedido precisa ter exatamente os jogos do carrinho.
+- **Memória:** a API guarda contas e sessões na memória. Se ela reiniciar, as contas somem e o token salvo deixa de valer; o front percebe o 401 e encerra a sessão.
 
-O pagamento acontece em um parceiro externo (gateway) que não faz parte do projeto. Por isso `placeOrder` sempre aprova: ele põe os jogos na biblioteca, tira da lista de desejos e esvazia o carrinho. Finalizar a compra exige estar na conta, e o login e o cadastro aceitam `?redirectTo=` para voltar ao checkout (só caminhos internos, conferidos por `getSafeRedirectPath`).
+As coleções mudam na tela na hora (atualização otimista) e voltam ao que eram se a API recusar. As páginas de catálogo (`/`, `/genres/:id`, `/games/:id`, `/search`) rodam a cada visita, com as listas de jogos em cache por 10 minutos (`CATALOG_CACHE_SECONDS`), então o build não depende da API estar no ar. Se ela cair, aparece `src/app/error.tsx`. As imagens vêm da Steam, liberadas em `images.remotePatterns` no `next.config.ts`.
 
 ## Formulários
 
@@ -163,4 +169,3 @@ Todo formulário segue o mesmo padrão. Reaproveite os componentes de `src/compo
 - Erros que só o servidor descobre, como apelido repetido, voltam para o campo certo com `setFieldError`.
 - Confirmações aparecem em uma região `role="status"` que fica sempre no HTML, mesmo vazia.
 
-As capas em `public/games/` são SVGs abstratos gerados com as cores do manual, porque os jogos são fictícios.

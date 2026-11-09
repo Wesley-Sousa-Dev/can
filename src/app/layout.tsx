@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s | Can",
   },
   description:
-    "Loja e biblioteca de jogos Can: destaques, ofertas especiais e lançamentos.",
+    "Loja e biblioteca de jogos Can: destaques, ofertas especiais e jogos por gênero.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
