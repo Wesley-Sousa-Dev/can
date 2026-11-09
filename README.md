@@ -1,8 +1,10 @@
 # Can
 
-A **Can** é uma loja e biblioteca de jogos para a web, inspirada na Steam e desenvolvida em TypeScript com Next.js e React. Ela consome a [Can Games API](https://github.com/Ana72Lu/can-api), que reúne as ofertas da CheapShark e os dados da Steam Store, e apresenta o catálogo com preços em reais, pesquisa, filtros por gênero e uma página de detalhes para cada jogo.
+A **Can** é uma loja e biblioteca de jogos para a web, inspirada na Steam e desenvolvida em TypeScript com Next.js e React. Ela consome a [Can Games API](https://github.com/Ana72Lu/can-api), que reúne as ofertas da [CheapShark](https://www.cheapshark.com/api) e os dados da [Steam Store](https://store.steampowered.com/api), e apresenta o catálogo com preços em reais, pesquisa, filtros por gênero e uma página de detalhes para cada jogo.
 
-Além da navegação pelo catálogo, o front-end oferece cadastro e autenticação de usuários, lista de desejos, carrinho, finalização simulada de compras e biblioteca com os jogos adquiridos. O projeto tem finalidade acadêmica e foi desenvolvido para a disciplina de Programação para Interface de Usuário, da Unijuí. A interface segue um manual de identidade visual próprio, de fundo escuro, e foi projetada para atender ao nível AA da WCAG em computadores e dispositivos móveis.
+Além da navegação pelo catálogo, o front-end oferece cadastro e autenticação de usuários, lista de desejos, carrinho, finalização simulada de compras e biblioteca com os jogos adquiridos. A interface segue um manual de identidade visual próprio, de fundo escuro, e foi projetada para atender ao nível AA da WCAG em computadores e dispositivos móveis.
+
+🔗 **Acesse a Can:** [https://can.arisesystem.com.br/](https://can.arisesystem.com.br/)
 
 ---
 
@@ -66,18 +68,24 @@ O navegador acessa o front-end e a API pelos endereços públicos do túnel. Já
 
 ## 🎨 Decisões de design
 
-A interface segue o manual de identidade visual da Can, que define uma única paleta, de fundo escuro, no estilo das lojas de jogos para PC. Os valores do manual são declarados como tokens em `src/app/globals.css`, e os componentes utilizam exclusivamente esses tokens. As cores e as escalas padrão do Tailwind foram desativadas; dessa forma, uma classe fora do manual não gera nenhum estilo.
+A Can segue um manual de identidade visual próprio, com fundo escuro, como as lojas de jogos para computador. O fundo escuro deixa em destaque as capas coloridas dos jogos. As cores, as fontes e as sombras do manual estão em `src/app/globals.css`, e o site utiliza somente esses valores.
 
-### Iconografia
+### Logo e nome
 
-- **Ícones:** ícones de linha da biblioteca Lucide (`lucide-react`), com traço uniforme em todo o site, nos tamanhos de 16, 20 e 24 px (`size-4`, `size-5` e `size-6`).
-- **Acessibilidade dos ícones:** os ícones exibidos ao lado de um texto são decorativos e recebem `aria-hidden="true"`. Os botões compostos apenas por um ícone possuem um nome acessível, como "Menu", "Próximo destaque" ou "Fechar".
-- **Marca:** o cabeçalho e o rodapé utilizam o componente `Logo`, que exibe o emblema da lata, recortado em círculo, ao lado do nome "Can" em texto. As telas de login e de cadastro apresentam uma ilustração própria em SVG, com latas de refrigerante que se transformam em foguetes.
-- **Capas:** as imagens dos jogos são fornecidas pela Steam. Quando um jogo não possui imagem, é exibido o ícone de um controle (`Gamepad2`).
+<img src="src/assets/brand/can-emblem.png" alt="Logo da Can: uma lata aberta, desenhada em linhas brancas sobre um círculo roxo" width="120">
+
+Em inglês, *can* significa "lata" e também "poder".
+
+A logo é uma lata genérica, sem marca nem rótulo. Assim como uma lata pode ser o que o fabricante quiser para atender ao seu público, a Can pode ser o que o usuário quiser, com os jogos que ele escolher. O usuário tem esse poder, essa potência de ser: por isso, o nome une o *can* de lata ao *can* de poder.
+
+A lata aparece aberta e inclinada, desenhada em linhas brancas sobre um círculo roxo, a cor principal do site. No cabeçalho e no rodapé, ela fica ao lado do nome "Can", escrito com a fonte dos títulos. A mesma ideia aparece nas telas de login e de cadastro, em que latas de refrigerante se transformam em foguetes.
 
 ### Tipografia
 
-Os títulos utilizam a fonte **Rajdhani**, e os demais textos utilizam a **Roboto**. A família é definida pelo tamanho do texto:
+O site utiliza duas fontes **sem serifa**. As fontes com serifa, que têm pequenos traços nas pontas das letras, lembram textos impressos e transmitem um estilo mais tradicional. As fontes sem serifa têm um desenho mais limpo, são mais fáceis de ler na tela, principalmente em tamanhos pequenos, e transmitem um estilo moderno, que combina com jogos.
+
+- **Rajdhani**, nos títulos: letras de formas retas e quase quadradas, com aparência tecnológica.
+- **Roboto**, nos demais textos: fonte neutra, criada para telas, que continua legível em tamanhos pequenos.
 
 | Nome | Família | Tamanho | Peso | Altura de linha |
 |---|---|---|---|---|
@@ -89,11 +97,22 @@ Os títulos utilizam a fonte **Rajdhani**, e os demais textos utilizam a **Robot
 | `medium` | Roboto | 16 px | 400 e 500 | 1,5 |
 | `small` | Roboto | 14 px | 400 e 500 | 1,5 |
 
-O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de linha de 1,5 no corpo do texto atende ao critério 1.4.8 da WCAG (nível AAA). As duas fontes são carregadas pelo `next/font` e servidas pelo próprio site, sem requisições do navegador aos servidores do Google.
+O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de linha de 1,5 facilita a leitura dos textos (critério 1.4.8 da WCAG, nível AAA).
+
+### Iconografia
+
+Os ícones seguem o estilo **linear** e **flat**: são desenhados com traços, sem sombra, volume ou efeito 3D. Eles vêm da biblioteca Lucide, têm a mesma espessura de traço em todo o site e aparecem em três tamanhos: 16, 20 e 24 px. O estilo linear é leve, combina com as fontes sem serifa e não disputa a atenção com as capas dos jogos.
+
+Os ícones **preenchidos** aparecem em apenas dois casos, para indicar um estado ou destacar uma ação:
+
+- O coração fica preenchido quando o jogo está na lista de desejos.
+- O botão "Jogar", da biblioteca, utiliza o ícone de play preenchido.
+
+Os ícones ao lado de um texto são decorativos e ficam ocultos para os leitores de tela. Os botões formados apenas por um ícone têm um nome, como "Menu" ou "Fechar". Quando um jogo não tem capa, o ícone de um controle aparece no lugar da imagem.
 
 ### Cores
 
-**Primária (roxo):** utilizada em botões principais, abas e itens selecionados.
+**Primária (roxo):** a mesma cor da logo, utilizada em botões principais, abas e itens selecionados.
 
 | Uso | Hex | Token |
 |---|---|---|
@@ -101,7 +120,7 @@ O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de l
 | Hover | `#5B21B6` | `--color-primary-hover` |
 | Foco e links | `#A78BFA` | `--color-primary-focus` |
 
-**Secundárias:** cada cor possui uma função fixa.
+**Secundárias:** cada cor tem uma função fixa.
 
 | Uso | Hex | Token |
 |---|---|---|
@@ -109,7 +128,7 @@ O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de l
 | Marcadores (tags) e selo "Novo" | `#06B6D4` | `--color-tag` |
 | Ações destrutivas, como a exclusão da conta | `#EF4444` | `--color-destructive` |
 
-**Neutras:** utilizadas em fundos, bordas e textos.
+**Neutras:** utilizadas nos fundos, nas bordas e nos textos.
 
 | Uso | Hex | Token |
 |---|---|---|
@@ -122,7 +141,7 @@ O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de l
 | Subtítulos e placeholders | `#94A3B8` | `--color-subtitle` e `--color-placeholder` |
 | Texto desativado | `#64748B` | `--color-disabled` |
 
-**Ajustes de acessibilidade:** três combinações previstas no manual não atingiam o contraste exigido pelo nível AA. Para corrigi-las, foram criados três tokens, derivados das mesmas escalas de cor:
+**Ajustes de acessibilidade:** três combinações do manual não tinham o contraste exigido pelo nível AA. Para corrigi-las, foram criadas três cores, tiradas das mesmas escalas:
 
 | Uso | Hex | Token | Contraste |
 |---|---|---|---|
@@ -132,12 +151,12 @@ O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de l
 
 ### Acessibilidade (WCAG 2.2, nível AA)
 
-- **Contraste:** todos os textos possuem contraste de pelo menos 4,5:1. As bordas dos campos e os indicadores de foco possuem pelo menos 3:1. Textos claros não são utilizados sobre o verde nem sobre o vermelho.
-- **Navegação por teclado:** todas as funcionalidades podem ser utilizadas sem mouse, e o foco permanece sempre visível, com um contorno de 2 px na cor `--color-primary-focus`. O primeiro Tab exibe o link "Pular para o conteúdo principal". As abas são alternadas com as setas do teclado, a pesquisa com sugestões segue o padrão *combobox*, e a tecla Esc fecha o menu, as sugestões, a galeria ampliada e as cápsulas expandidas.
-- **Leitores de tela:** as páginas declaram o idioma (`lang="pt-BR"`) e possuem regiões identificadas (cabeçalho, navegação, conteúdo principal e rodapé) e títulos em ordem hierárquica. Avisos como "foi adicionado ao carrinho" e "foi removido do carrinho" são anunciados por regiões `role="status"`. Após a remoção de um item, o foco é direcionado a um elemento adequado.
-- **Formulários:** todos possuem rótulo visível, asterisco nos campos obrigatórios, `autocomplete` nos dados pessoais, resumo de erros que recebe o foco e mensagens que indicam como corrigir cada erro. Os detalhes estão na seção [Formulários](#formulários).
-- **Movimento:** o carrossel não alterna os destaques automaticamente (critério 2.2.2). As animações são desativadas quando o usuário solicita a redução de movimento nas configurações do sistema (`prefers-reduced-motion`).
-- **Ações irreversíveis:** a exclusão da conta exige confirmação em uma janela própria (critério 3.3.4).
+- **Contraste:** todos os textos têm contraste de pelo menos 4,5:1, e as bordas dos campos e o contorno de foco têm pelo menos 3:1.
+- **Teclado:** todo o site funciona sem mouse, e o foco fica sempre visível, com um contorno roxo-claro. O primeiro Tab mostra o link "Pular para o conteúdo principal", e a tecla Esc fecha o menu, as sugestões da pesquisa e a galeria ampliada.
+- **Leitores de tela:** as páginas informam o idioma e têm regiões e títulos organizados. Avisos como "foi adicionado ao carrinho" são anunciados pelos leitores de tela.
+- **Formulários:** os campos têm rótulo visível, os obrigatórios são marcados com asterisco, e as mensagens de erro explicam como corrigir. Os detalhes estão na seção [Formulários](#formulários).
+- **Movimento:** o carrossel não troca os destaques sozinho, e as animações são desligadas quando o usuário pede menos movimento nas configurações do sistema.
+- **Ações irreversíveis:** a exclusão da conta pede confirmação.
 
 Resultados do Lighthouse 13 no build de produção local (`npm run build` e `npm start`), obtidos em 09/11/2026 com a API em execução:
 
@@ -155,19 +174,15 @@ Resultados do Lighthouse 13 no build de produção local (`npm run build` e `npm
 | Entrar (`/login`) | 100 | 100 | 100 | 98 | 100 |
 | Criar conta (`/signup`) | 100 | 100 | 100 | 97 | 100 |
 
-As notas de acessibilidade, boas práticas e SEO são iguais nas duas medições, em dispositivos móveis e em computadores. O desempenho em dispositivos móveis é menor nas telas com imagens grandes da Steam, pois o Lighthouse simula uma conexão 4G lenta.
+As notas de acessibilidade, boas práticas e SEO são as mesmas em dispositivos móveis e em computadores. Em dispositivos móveis, o desempenho é menor nas telas com imagens grandes da Steam, porque o Lighthouse simula uma conexão 4G lenta.
 
-Como o Lighthouse acessa as telas sem autenticação, as telas que exigem conta foram avaliadas no estado de convite para login. Para cobrir o conteúdo exibido a usuários autenticados, todas as telas também foram verificadas com o axe-core, utilizando uma conta com jogos no carrinho, na lista de desejos e na biblioteca:
-
-- Regras da WCAG 2.0, 2.1 e 2.2, níveis A e AA;
-- Larguras de 1366 px e 320 px;
-- Resultado: nenhuma violação encontrada.
+O Lighthouse abre as telas sem login, então as telas que exigem conta foram avaliadas com o convite para entrar. Para avaliar também o que o usuário vê depois do login, todas as telas foram verificadas com o axe-core, com uma conta que tinha jogos no carrinho, na lista de desejos e na biblioteca. A verificação utilizou as regras da WCAG 2.0, 2.1 e 2.2 (níveis A e AA), nas larguras de 1366 px e 320 px, e não encontrou nenhuma violação.
 
 ### Responsividade
 
-- **Abordagem:** o layout é desenvolvido primeiro para dispositivos móveis e se adapta nos breakpoints do Tailwind: `sm` (640 px), `md` (768 px) e `lg` (1024 px).
-- **Dispositivos móveis:** a navegação é agrupada no botão "Menu", e os filtros ficam em um painel que pode ser aberto e fechado. As listas e os formulários ocupam uma única coluna, e não há rolagem horizontal mesmo com 320 px de largura (critério 1.4.10).
-- **Computadores:** a navegação é exibida por completo no cabeçalho, e os filtros ficam ao lado da lista. A página do jogo divide o conteúdo em duas colunas, e os jogos são exibidos em grades com várias colunas.
+- **Abordagem:** o layout foi feito primeiro para o celular e se adapta às telas maiores a partir de 640, 768 e 1024 px.
+- **Dispositivos móveis:** a navegação fica no botão "Menu", e os filtros ficam em um painel que abre e fecha. As listas e os formulários ocupam uma única coluna, sem rolagem horizontal mesmo com 320 px de largura (critério 1.4.10).
+- **Computadores:** a navegação aparece completa no cabeçalho, e os filtros ficam ao lado da lista. A página do jogo é dividida em duas colunas, e os jogos aparecem em grades.
 
 ---
 
@@ -219,26 +234,19 @@ can/
 
 ## 🏗️ Arquitetura e Integrações
 
-A Can Games API consulta duas fontes externas e combina os dados recebidos. O front-end consome a API a partir de dois pontos:
-
-- **Servidor do Next.js:** gera as páginas do catálogo e mantém as listas de jogos em cache por 10 minutos.
-- **Navegador:** realiza as consultas da pesquisa durante a digitação e as operações que dependem da conta do usuário, enviando o token JWT no cabeçalho `Authorization`.
+A Can Games API consulta duas fontes externas e combina os dados recebidos. O front-end da Can consome os dados da API:
 
 ```mermaid
 graph TD
     CS["<b>CheapShark API</b><br/>Ofertas e preços dos jogos"] --> API["<b>Can Games API</b><br/>Node.js + Express"]
     SS["<b>Steam Store API</b><br/>Detalhes dos jogos"] --> API
-
-    subgraph FRONT["<b>Can</b> · front-end em Next.js"]
-        SRV["<b>Servidor do Next</b><br/>Páginas do catálogo<br/>Listas em cache por 10 min"]
-        WEB["<b>Navegador</b><br/>Sugestões da busca e conta<br/>Carrinho, lista de desejos,<br/>biblioteca e compra"]
-        SRV -->|"HTML pronto"| WEB
-    end
-
-    API -->|"GET /games e /games/:id"| SRV
-    API <-->|"GET, POST, PATCH e DELETE<br/>com o token JWT"| WEB
-    IMG["<b>Imagens da Steam</b><br/>Capas e capturas de tela"] -->|"otimizadas pelo Next"| SRV
+    API --> FRONT["<b>Can</b><br/>Front-end em Next.js"]
 ```
+
+No front-end, a API é consumida a partir de dois pontos:
+
+- **Servidor do Next.js:** gera as páginas do catálogo e mantém as listas de jogos em cache por 10 minutos.
+- **Navegador:** realiza as consultas da pesquisa durante a digitação e as operações que dependem da conta do usuário, enviando o token JWT no cabeçalho `Authorization`.
 
 ### Camadas
 
