@@ -101,7 +101,7 @@ O peso 500 da Roboto é utilizado em botões, preços e destaques. A altura de l
 
 ### Iconografia
 
-Os ícones seguem o estilo **linear** e **flat**: são desenhados com traços, sem sombra, volume ou efeito 3D. Eles vêm da biblioteca Lucide, têm a mesma espessura de traço em todo o site e aparecem em três tamanhos: 16, 20 e 24 px. O estilo linear é leve, combina com as fontes sem serifa e não disputa a atenção com as capas dos jogos.
+Os ícones seguem o estilo **linear**: são desenhados apenas com o contorno, em traços, sem preenchimento. O site não utiliza ícones flat, de formas chapadas e coloridas, nem 3D, com volume e sombra. Os ícones vêm da biblioteca Lucide, têm a mesma espessura de traço em todo o site e aparecem em três tamanhos: 16, 20 e 24 px. O estilo linear é leve, combina com as fontes sem serifa e não disputa a atenção com as capas dos jogos.
 
 Os ícones **preenchidos** aparecem em apenas dois casos, para indicar um estado ou destacar uma ação:
 
