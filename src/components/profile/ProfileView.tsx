@@ -8,18 +8,12 @@ import { AccountDetails } from "@/components/profile/AccountDetails";
 import { DeleteAccountSection } from "@/components/profile/DeleteAccountSection";
 import { GameShelf } from "@/components/profile/GameShelf";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { useCollectionGames } from "@/hooks/useCollectionGames";
 import { useGameCollection } from "@/hooks/useGameCollection";
-import { useSession } from "@/hooks/useSession";
 import { signOut } from "@/services/authService";
-import {
-  cartCollection,
-  libraryCollection,
-  wishlistCollection,
-} from "@/services/userCollections";
-import type { Game } from "@/types/game";
+import { cartCollection, libraryCollection, wishlistCollection } from "@/services/userCollections";
 
 interface ProfileViewProps {
-  games: Game[];
   isNewAccount: boolean;
 }
 
@@ -56,7 +50,7 @@ function SignedOutNotice() {
       </p>
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/login"
+          href="/login?redirectTo=%2Fprofile"
           className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-medium font-medium text-title transition-colors hover:bg-primary-hover"
         >
           Entrar
@@ -72,12 +66,12 @@ function SignedOutNotice() {
   );
 }
 
-export function ProfileView({ games, isNewAccount }: ProfileViewProps) {
+export function ProfileView({ isNewAccount }: ProfileViewProps) {
   const router = useRouter();
-  const session = useSession();
-  const library = useGameCollection(libraryCollection);
-  const wishlist = useGameCollection(wishlistCollection);
+  const libraryShelf = useCollectionGames(libraryCollection);
+  const wishlistShelf = useCollectionGames(wishlistCollection);
   const cart = useGameCollection(cartCollection);
+  const { session } = libraryShelf;
 
   // A sessão mora no navegador: no HTML do servidor ainda não se sabe quem está conectado.
   if (session.status === "loading") {
@@ -93,11 +87,9 @@ export function ProfileView({ games, isNewAccount }: ProfileViewProps) {
   }
 
   const { user } = session;
-  const gamesById = new Map(games.map((game) => [game.id, game]));
-  const findGames = (gameIds: readonly string[]) => gameIds.flatMap((gameId) => gamesById.get(gameId) ?? []);
 
   function handleSignOut() {
-    signOut();
+    void signOut();
     router.push("/");
   }
 
@@ -106,22 +98,26 @@ export function ProfileView({ games, isNewAccount }: ProfileViewProps) {
       {isNewAccount && <WelcomeMessage nickname={user.nickname} />}
       <ProfileHeader
         user={user}
-        libraryCount={library.gameIds.length}
-        wishlistCount={wishlist.gameIds.length}
+        libraryCount={libraryShelf.collection.gameIds.length}
+        wishlistCount={wishlistShelf.collection.gameIds.length}
         cartCount={cart.gameIds.length}
         onSignOut={handleSignOut}
       />
       <GameShelf
         headingId="library-heading"
         title="Biblioteca"
-        games={findGames(library.gameIds)}
-        emptyMessage="Sua biblioteca está vazia. Jogos gratuitos e compras aparecem aqui."
+        games={libraryShelf.games}
+        gameCount={libraryShelf.collection.gameIds.length}
+        isLoading={libraryShelf.viewState === "loading"}
+        emptyMessage="Sua biblioteca está vazia. Os jogos que você comprar aparecem aqui."
         fullListLink={{ href: "/library", label: "Abrir a biblioteca" }}
       />
       <GameShelf
         headingId="wishlist-heading"
         title="Lista de desejos"
-        games={findGames(wishlist.gameIds)}
+        games={wishlistShelf.games}
+        gameCount={wishlistShelf.collection.gameIds.length}
+        isLoading={wishlistShelf.viewState === "loading"}
         emptyMessage="Nenhum jogo na lista de desejos ainda. Use o botão de coração na página de um jogo."
         fullListLink={{ href: "/wishlist", label: "Abrir a lista de desejos" }}
       />

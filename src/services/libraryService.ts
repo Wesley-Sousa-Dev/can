@@ -1,8 +1,8 @@
 import { libraryCollection } from "@/services/userCollections";
 
-// Os jogos da Can são fictícios, então "Jogar" não abre nada de verdade:
-// só registra a sessão, que alimenta a ordem por atividade recente.
-// Com a API, vira um PATCH /library/:gameId com o novo lastPlayedAt.
-export function launchGame(gameId: string): void {
-  libraryCollection.update(gameId, { lastPlayedAt: new Date().toISOString() });
+// "Jogar" não abre o jogo de verdade (a Can não instala nada): só registra a
+// sessão, que alimenta a ordem por atividade recente. Equivale ao
+// PATCH /library/:gameId, que grava o lastPlayedAt.
+export function launchGame(gameId: string): Promise<void> {
+  return libraryCollection.markPlayed(gameId);
 }

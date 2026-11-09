@@ -7,10 +7,12 @@ import { flushSync } from "react-dom";
 
 import { GameCover } from "@/components/game/GameCover";
 import { PriceTag } from "@/components/game/PriceTag";
-import { formatShortDate, formatShortLocalDate } from "@/lib/dates";
+import { formatShortLocalDate } from "@/lib/dates";
 import { getPurchaseOption } from "@/lib/gameAvailability";
-import { formatCount, getReviewLabel } from "@/lib/reviews";
 import type { WishlistItem } from "@/lib/wishlist";
+
+// A Steam manda de 10 a 15 marcadores por jogo; a linha mostra só os primeiros.
+const TAGS_SHOWN = 6;
 
 export type MoveDirection = "up" | "down";
 
@@ -35,7 +37,6 @@ interface WishlistItemRowProps {
   onMove: (direction: MoveDirection) => void;
   onRemove: () => void;
   onAddToCart: () => void;
-  onAddToLibrary: () => void;
 }
 
 // Ids usados pela lista para devolver o foco depois de mover ou remover um jogo.
@@ -99,14 +100,13 @@ export function WishlistItemRow({
   onMove,
   onRemove,
   onAddToCart,
-  onAddToLibrary,
 }: WishlistItemRowProps) {
   const { game, addedAt, position } = item;
   const completedActionLinkRef = useRef<HTMLAnchorElement>(null);
   const titleId = `wishlist-heading-${game.id}`;
   const tagsLabelId = `wishlist-tags-${game.id}`;
   const purchaseOption = getPurchaseOption(game);
-  const gamePageUrl = `/games/${game.slug}`;
+  const gamePageUrl = `/games/${game.id}`;
 
   // O botão vira um link "No carrinho". O flushSync coloca o link na tela
   // na hora, para ele receber o foco no lugar do botão que sumiu.
@@ -128,11 +128,11 @@ export function WishlistItemRow({
   }
 
   function renderMainAction() {
-    if (purchaseOption === "upcoming") {
-      return <p className="text-medium font-medium text-title">Em breve</p>;
+    if (purchaseOption === "unavailable") {
+      return <p className="text-small text-subtitle">Sem preço no momento</p>;
     }
 
-    // Jogo já comprado (ou gratuito já adicionado): não faz sentido comprar de novo.
+    // Jogo já comprado: não faz sentido comprar de novo.
     if (isInLibrary) {
       return (
         <Link ref={completedActionLinkRef} href="/library" className={DONE_LINK_CLASS}>
@@ -142,15 +142,7 @@ export function WishlistItemRow({
       );
     }
 
-    if (purchaseOption === "free") {
-      return (
-        <button type="button" onClick={() => runAndFocusCompletedAction(onAddToLibrary)} className={CTA_BUTTON_CLASS}>
-          <Plus aria-hidden="true" className="size-5" />
-          Biblioteca<span className="sr-only">: adicionar {game.title}</span>
-        </button>
-      );
-    }
-
+    // Gratuito ou pago, o jogo só entra na biblioteca por uma compra (POST /orders).
     return isInCart ? (
       <Link ref={completedActionLinkRef} href="/cart" className={DONE_LINK_CLASS}>
         <Check aria-hidden="true" className="size-5 text-cta" />
@@ -249,29 +241,12 @@ export function WishlistItemRow({
             </div>
           </div>
 
-          <dl className="flex flex-col gap-1 text-small sm:flex-row sm:flex-wrap sm:gap-x-6">
-            <div className="flex flex-wrap gap-x-1">
-              <dt className="uppercase text-subtitle">
-                {purchaseOption === "upcoming" ? "Lançamento previsto:" : "Lançamento:"}
-              </dt>
-              <dd className="text-title">
-                <time dateTime={game.releaseDate}>{formatShortDate(game.releaseDate)}</time>
-              </dd>
-            </div>
-            <div className="flex flex-wrap gap-x-1">
-              <dt className="uppercase text-subtitle">Análises:</dt>
-              <dd className="text-title">
-                {game.reviewSummary ? (
-                  <>
-                    <span className="font-medium">{getReviewLabel(game.reviewSummary)}</span>{" "}
-                    <span className="text-subtitle">({formatCount(game.reviewSummary.totalReviews)})</span>
-                  </>
-                ) : (
-                  <span className="text-subtitle">Depois do lançamento</span>
-                )}
-              </dd>
-            </div>
-          </dl>
+          {game.genres.length > 0 && (
+            <p className="text-small text-title">
+              <span className="uppercase text-subtitle">Gêneros: </span>
+              {game.genres.map((genre) => genre.name).join(" · ")}
+            </p>
+          )}
 
           {game.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -279,7 +254,7 @@ export function WishlistItemRow({
                 Marcadores:
               </p>
               <ul aria-labelledby={tagsLabelId} className="flex flex-wrap gap-2">
-                {game.tags.map((tag) => (
+                {game.tags.slice(0, TAGS_SHOWN).map((tag) => (
                   <li key={tag} className="rounded-md border border-tag px-2 text-small text-tag">
                     {tag}
                   </li>
@@ -289,8 +264,8 @@ export function WishlistItemRow({
           )}
 
           <div className="mt-auto flex flex-wrap items-center justify-end gap-3">
-            {purchaseOption !== "upcoming" && !isInLibrary && (
-              <PriceTag priceInCents={game.priceInCents} discountPercent={game.discountPercent} />
+            {(purchaseOption === "buy" || purchaseOption === "free") && !isInLibrary && (
+              <PriceTag price={game} />
             )}
             {renderMainAction()}
           </div>

@@ -5,18 +5,15 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { CollectionPageState } from "@/components/account/CollectionPageState";
 import { CartItemRow, getCartTitleLinkId } from "@/components/cart/CartItemRow";
 import { CheckoutSteps } from "@/components/checkout/CheckoutSteps";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
-import { useGameCollection } from "@/hooks/useGameCollection";
-import { useSession } from "@/hooks/useSession";
+import { useCollectionGames } from "@/hooks/useCollectionGames";
 import { formatGameCount } from "@/lib/text";
+import { ApiError } from "@/services/apiClient";
 import { cartCollection } from "@/services/userCollections";
 import type { Game } from "@/types/game";
-
-interface CartViewProps {
-  games: Game[];
-}
 
 const CTA_LINK_CLASS =
   "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-cta px-5 text-medium font-medium text-on-accent shadow-soft underline-offset-4 transition-shadow hover:underline hover:shadow-strong";
@@ -24,33 +21,40 @@ const CTA_LINK_CLASS =
 const SECONDARY_ACTION_CLASS =
   "inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-medium font-medium text-primary-focus underline underline-offset-4 hover:text-title";
 
-export function CartView({ games }: CartViewProps) {
-  const session = useSession();
-  const cart = useGameCollection(cartCollection);
+function describeFailure(error: unknown): string {
+  return error instanceof ApiError ? error.message : "Tente de novo.";
+}
+
+export function CartView() {
+  const { collection: cart, games: cartGames, viewState, retry } = useCollectionGames(cartCollection);
   const [statusMessage, setStatusMessage] = useState("");
   const emptyCartHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // O carrinho mora no navegador: no HTML do servidor ele ainda não existe.
-  // Sem esta espera, a tela piscaria "carrinho vazio" antes de carregar.
-  if (session.status === "loading") {
+  // O carrinho vem da API depois que a página abre. Sem esta espera, a tela
+  // piscaria "carrinho vazio" antes de carregar.
+  if (viewState !== "ready") {
     return (
-      <p aria-busy="true" className="mx-auto max-w-6xl px-4 py-16 text-medium text-subtitle sm:px-6">
-        Carregando carrinho...
-      </p>
+      <CollectionPageState
+        viewState={viewState}
+        title="Seu carrinho"
+        loadingText="Carregando carrinho..."
+        signInText="O carrinho fica guardado na sua conta. Entre para adicionar jogos e finalizar a compra."
+        onRetry={retry}
+      />
     );
   }
-
-  const gamesById = new Map(games.map((game) => [game.id, game]));
-  const cartGames = cart.gameIds.flatMap((gameId) => gamesById.get(gameId) ?? []);
 
   // Depois de remover, o foco vai para o jogo seguinte (ou o anterior, se era
   // o último). Com o carrinho vazio, vai para a mensagem de carrinho vazio.
   function removeGame(game: Game) {
     const gameIndex = cartGames.findIndex((cartGame) => cartGame.id === game.id);
     const nextFocusedGame = cartGames[gameIndex + 1] ?? cartGames[gameIndex - 1];
-    flushSync(() => {
-      cart.removeGame(game.id);
+    const request = flushSync(() => {
       setStatusMessage(`${game.title} foi removido do carrinho.`);
+      return cart.removeGame(game.id);
+    });
+    request.catch((error: unknown) => {
+      setStatusMessage(`Não foi possível remover ${game.title}. ${describeFailure(error)}`);
     });
     if (nextFocusedGame) {
       document.getElementById(getCartTitleLinkId(nextFocusedGame.id))?.focus();
@@ -59,12 +63,16 @@ export function CartView({ games }: CartViewProps) {
     }
   }
 
+  // A API não tem uma rota para esvaziar o carrinho: cada jogo sai com o próprio DELETE.
   function removeAllGames() {
-    flushSync(() => {
-      cartCollection.clear();
+    const requests = flushSync(() => {
       setStatusMessage("Todos os jogos foram removidos do carrinho.");
+      return cart.gameIds.map((gameId) => cart.removeGame(gameId));
     });
     emptyCartHeadingRef.current?.focus();
+    Promise.all(requests).catch((error: unknown) => {
+      setStatusMessage(`Não foi possível remover todos os jogos. ${describeFailure(error)}`);
+    });
   }
 
   return (
@@ -131,11 +139,6 @@ export function CartView({ games }: CartViewProps) {
               <Link href="/checkout" className={CTA_LINK_CLASS}>
                 Finalizar compra
               </Link>
-              {session.status === "signed-out" && (
-                <p className="text-small text-subtitle">
-                  Você vai precisar entrar na sua conta para concluir a compra.
-                </p>
-              )}
             </OrderSummary>
           </div>
         </div>

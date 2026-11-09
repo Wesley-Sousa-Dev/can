@@ -4,11 +4,11 @@ import { Gamepad2, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
+import { CollectionPageState } from "@/components/account/CollectionPageState";
 import { LibraryGameCard, type LibraryLayout } from "@/components/library/LibraryGameCard";
 import { LibraryToolbar } from "@/components/library/LibraryToolbar";
 import { Avatar } from "@/components/ui/Avatar";
-import { useGameCollection } from "@/hooks/useGameCollection";
-import { useSession } from "@/hooks/useSession";
+import { useCollectionGames } from "@/hooks/useCollectionGames";
 import {
   buildLibraryItems,
   DEFAULT_LIBRARY_FILTERS,
@@ -21,13 +21,9 @@ import {
   type LibrarySortOrder,
 } from "@/lib/library";
 import { formatGameCount } from "@/lib/text";
+import { ApiError } from "@/services/apiClient";
 import { launchGame } from "@/services/libraryService";
 import { libraryCollection } from "@/services/userCollections";
-import type { Game } from "@/types/game";
-
-interface LibraryViewProps {
-  games: Game[];
-}
 
 const LIST_CLASS_BY_LAYOUT: Record<LibraryLayout, string> = {
   grid: "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4",
@@ -37,9 +33,8 @@ const LIST_CLASS_BY_LAYOUT: Record<LibraryLayout, string> = {
 const EMPTY_STATE_CLASS =
   "flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6";
 
-export function LibraryView({ games }: LibraryViewProps) {
-  const session = useSession();
-  const library = useGameCollection(libraryCollection);
+export function LibraryView() {
+  const { session, collection: library, games, viewState, retry } = useCollectionGames(libraryCollection);
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   // Por padrão, os jogos mais recentes primeiro: quem acabou de comprar já
   // encontra os jogos novos no topo.
@@ -48,27 +43,34 @@ export function LibraryView({ games }: LibraryViewProps) {
   const [statusMessage, setStatusMessage] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // A sessão e a biblioteca moram no navegador: no HTML do servidor ainda não
-  // existem. Sem esta espera, a tela piscaria "biblioteca vazia" antes de carregar.
-  if (session.status === "loading") {
+  // A biblioteca vem da API depois que a página abre. Sem esta espera, a tela
+  // piscaria "biblioteca vazia" antes de carregar.
+  if (viewState !== "ready" || session.status !== "signed-in") {
     return (
-      <p aria-busy="true" className="mx-auto max-w-6xl px-4 py-16 text-medium text-subtitle sm:px-6">
-        Carregando biblioteca...
-      </p>
+      <CollectionPageState
+        viewState={viewState === "ready" ? "loading" : viewState}
+        title="Sua biblioteca"
+        loadingText="Carregando biblioteca..."
+        signInText="A biblioteca guarda os jogos que você comprou. Entre para ver e jogar."
+        onRetry={retry}
+      />
     );
   }
 
   const allItems = buildLibraryItems(library.entries, games);
   const visibleItems = sortLibraryItems(filterLibraryItems(allItems, filters), sortOrder);
   const hasFilters = hasActiveLibraryFilters(filters);
-  const pageTitle = session.status === "signed-in" ? `Biblioteca de ${session.user.nickname}` : "Sua biblioteca";
+  const pageTitle = `Biblioteca de ${session.user.nickname}`;
   const resultCountText = hasFilters
     ? `Mostrando ${visibleItems.length} de ${formatGameCount(allItems.length)}`
     : formatGameCount(allItems.length);
 
   function playGame(item: LibraryItem) {
-    launchGame(item.game.id);
     setStatusMessage(`Abrindo ${item.game.title}. Bom jogo!`);
+    launchGame(item.game.id).catch((error: unknown) => {
+      const reason = error instanceof ApiError ? error.message : "Tente de novo.";
+      setStatusMessage(`Não foi possível registrar a partida de ${item.game.title}. ${reason}`);
+    });
   }
 
   function clearFilters() {
@@ -80,11 +82,9 @@ export function LibraryView({ games }: LibraryViewProps) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
       <div className="flex items-center gap-5">
-        {session.status === "signed-in" && (
-          <div className="hidden sm:block">
-            <Avatar fullName={session.user.fullName} size="large" />
-          </div>
-        )}
+        <div className="hidden sm:block">
+          <Avatar fullName={session.user.fullName} size="large" />
+        </div>
         <h1 className="min-w-0 font-display text-xx-large uppercase text-title wrap-break-word sm:text-xxx-large">
           {pageTitle}
         </h1>
@@ -108,7 +108,7 @@ export function LibraryView({ games }: LibraryViewProps) {
           <Gamepad2 aria-hidden="true" className="size-8 text-primary-focus" />
           <h2 className="font-display text-x-large text-title">Sua biblioteca está vazia</h2>
           <p className="text-medium text-subtitle">
-            Os jogos que você comprar ou os gratuitos que adicionar aparecem aqui, prontos para jogar.
+            Os jogos que você comprar aparecem aqui, prontos para jogar.
           </p>
           <Link
             href="/"

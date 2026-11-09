@@ -6,6 +6,3 @@ export interface GameCollectionEntry {
   /** Só na biblioteca: a última vez que o jogo foi aberto. Fica vazio se nunca foi. */
   lastPlayedAt?: string;
 }
-
-/** O que pode mudar em um item depois que ele entra na coleção. */
-export type GameCollectionEntryChanges = Pick<GameCollectionEntry, "lastPlayedAt">;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, useState, type DragEvent, type RefObject } from "react";
 import { flushSync } from "react-dom";
 
+import { CollectionPageState } from "@/components/account/CollectionPageState";
 import { Avatar } from "@/components/ui/Avatar";
 import {
   getMoveButtonId,
@@ -14,8 +15,8 @@ import {
   type WishlistDragHandlers,
 } from "@/components/wishlist/WishlistItemRow";
 import { WishlistToolbar } from "@/components/wishlist/WishlistToolbar";
+import { useCollectionGames } from "@/hooks/useCollectionGames";
 import { useGameCollection } from "@/hooks/useGameCollection";
-import { useSession } from "@/hooks/useSession";
 import { formatGameCount } from "@/lib/text";
 import {
   buildWishlistItems,
@@ -28,16 +29,8 @@ import {
   type WishlistItem,
   type WishlistSortOrder,
 } from "@/lib/wishlist";
-import {
-  cartCollection,
-  libraryCollection,
-  wishlistCollection,
-} from "@/services/userCollections";
-import type { GameListing } from "@/types/game";
-
-interface WishlistViewProps {
-  games: GameListing[];
-}
+import { ApiError } from "@/services/apiClient";
+import { cartCollection, libraryCollection, wishlistCollection } from "@/services/userCollections";
 
 interface EmptyStateProps {
   headingRef: RefObject<HTMLHeadingElement | null>;
@@ -107,9 +100,12 @@ function ReorderHint({ sortOrder, hasSearchOrFilters }: ReorderHintProps) {
   );
 }
 
-export function WishlistView({ games }: WishlistViewProps) {
-  const session = useSession();
-  const wishlist = useGameCollection(wishlistCollection);
+function describeFailure(error: unknown): string {
+  return error instanceof ApiError ? error.message : "Tente de novo.";
+}
+
+export function WishlistView() {
+  const { session, collection: wishlist, games, viewState, retry } = useCollectionGames(wishlistCollection);
   const cart = useGameCollection(cartCollection);
   const library = useGameCollection(libraryCollection);
   const [filters, setFilters] = useState<WishlistFilters>(DEFAULT_WISHLIST_FILTERS);
@@ -120,13 +116,17 @@ export function WishlistView({ games }: WishlistViewProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const emptyStateHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // A sessão e a lista moram no navegador: no HTML do servidor ainda não
-  // existem. Sem esta espera, a tela piscaria "lista vazia" antes de carregar.
-  if (session.status === "loading") {
+  // A lista vem da API depois que a página abre. Sem esta espera, a tela
+  // piscaria "lista vazia" antes de carregar.
+  if (viewState !== "ready" || session.status !== "signed-in") {
     return (
-      <p aria-busy="true" className="mx-auto max-w-6xl px-4 py-16 text-medium text-subtitle sm:px-6">
-        Carregando lista de desejos...
-      </p>
+      <CollectionPageState
+        viewState={viewState === "ready" ? "loading" : viewState}
+        title="Sua lista de desejos"
+        loadingText="Carregando lista de desejos..."
+        signInText="A lista de desejos fica guardada na sua conta. Entre para salvar os jogos que quer comprar depois."
+        onRetry={retry}
+      />
     );
   }
 
@@ -134,8 +134,7 @@ export function WishlistView({ games }: WishlistViewProps) {
   const visibleItems = sortWishlistItems(filterWishlistItems(allItems, filters), sortOrder);
   const hasSearchOrFilters = hasActiveSearchOrFilters(filters);
   const canReorder = sortOrder === "custom" && !hasSearchOrFilters && allItems.length > 1;
-  const pageTitle =
-    session.status === "signed-in" ? `Lista de desejos de ${session.user.nickname}` : "Sua lista de desejos";
+  const pageTitle = `Lista de desejos de ${session.user.nickname}`;
   const resultCountText = hasSearchOrFilters
     ? `Mostrando ${visibleItems.length} de ${formatGameCount(allItems.length)}`
     : formatGameCount(allItems.length);
@@ -152,7 +151,9 @@ export function WishlistView({ games }: WishlistViewProps) {
   }
 
   function moveItem(item: WishlistItem, targetItem: WishlistItem) {
-    wishlist.moveGame(item.game.id, targetItem.game.id);
+    wishlist.moveGame(item.game.id, targetItem.game.id).catch((error: unknown) => {
+      setStatusMessage(`Não foi possível mudar a posição de ${item.game.title}. ${describeFailure(error)}`);
+    });
     // O jogo toma o lugar do alvo, então a nova posição é a que o alvo tinha.
     setStatusMessage(
       `${item.game.title} agora está na posição ${targetItem.position} de ${allItems.length}.`,
@@ -176,9 +177,12 @@ export function WishlistView({ games }: WishlistViewProps) {
   function removeItem(item: WishlistItem) {
     const visibleIndex = visibleItems.findIndex((visibleItem) => visibleItem.game.id === item.game.id);
     const nextFocusedItem = visibleItems[visibleIndex + 1] ?? visibleItems[visibleIndex - 1];
-    flushSync(() => {
-      wishlist.removeGame(item.game.id);
+    const request = flushSync(() => {
       setStatusMessage(`${item.game.title} foi removido da lista de desejos.`);
+      return wishlist.removeGame(item.game.id);
+    });
+    request.catch((error: unknown) => {
+      setStatusMessage(`Não foi possível remover ${item.game.title}. ${describeFailure(error)}`);
     });
     if (nextFocusedItem) {
       document.getElementById(getTitleLinkId(nextFocusedItem.game.id))?.focus();
@@ -188,13 +192,10 @@ export function WishlistView({ games }: WishlistViewProps) {
   }
 
   function addToCart(item: WishlistItem) {
-    cart.addGame(item.game.id);
     setStatusMessage(`${item.game.title} foi adicionado ao carrinho.`);
-  }
-
-  function addToLibrary(item: WishlistItem) {
-    library.addGame(item.game.id);
-    setStatusMessage(`${item.game.title} foi adicionado à sua biblioteca.`);
+    cart.addGame(item.game).catch((error: unknown) => {
+      setStatusMessage(`Não foi possível adicionar ${item.game.title} ao carrinho. ${describeFailure(error)}`);
+    });
   }
 
   function clearDragState() {
@@ -229,11 +230,9 @@ export function WishlistView({ games }: WishlistViewProps) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
       <div className="flex items-center gap-5">
-        {session.status === "signed-in" && (
-          <div className="hidden sm:block">
-            <Avatar fullName={session.user.fullName} size="large" />
-          </div>
-        )}
+        <div className="hidden sm:block">
+          <Avatar fullName={session.user.fullName} size="large" />
+        </div>
         <h1 className="min-w-0 font-display text-xx-large uppercase text-title wrap-break-word sm:text-xxx-large">
           {pageTitle}
         </h1>
@@ -287,7 +286,6 @@ export function WishlistView({ games }: WishlistViewProps) {
                 onMove={(direction) => moveItemByOnePosition(item, direction)}
                 onRemove={() => removeItem(item)}
                 onAddToCart={() => addToCart(item)}
-                onAddToLibrary={() => addToLibrary(item)}
               />
             </li>
           ))}

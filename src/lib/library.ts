@@ -12,13 +12,12 @@ export interface LibraryItem {
   lastPlayedAt: string | null;
 }
 
-export type LibrarySortOrder = "recent-activity" | "name" | "recently-added" | "newest-release";
+export type LibrarySortOrder = "recent-activity" | "name" | "recently-added";
 
 export const LIBRARY_SORT_OPTIONS: { value: LibrarySortOrder; label: string }[] = [
   { value: "recent-activity", label: "Atividade recente" },
   { value: "name", label: "Nome (A a Z)" },
   { value: "recently-added", label: "Adicionados recentemente" },
-  { value: "newest-release", label: "Lançamento mais recente" },
 ];
 
 export type LibraryGenreFilter = GenreId | "all";
@@ -89,8 +88,6 @@ const LIBRARY_COMPARATORS: Record<LibrarySortOrder, LibraryComparator> = {
     getLastActivityAt(secondItem).localeCompare(getLastActivityAt(firstItem)),
   name: () => 0,
   "recently-added": (firstItem, secondItem) => secondItem.addedAt.localeCompare(firstItem.addedAt),
-  "newest-release": (firstItem, secondItem) =>
-    secondItem.game.releaseDate.localeCompare(firstItem.game.releaseDate),
 };
 
 // Nos empates (e na ordem por nome) vale o título.

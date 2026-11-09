@@ -9,17 +9,20 @@ interface GameShelfProps {
   headingId: string;
   title: string;
   games: Game[];
+  /** Quantos jogos a coleção tem, mesmo antes de os dados de cada um chegarem da API. */
+  gameCount: number;
+  isLoading: boolean;
   emptyMessage: string;
   /** Página com a coleção completa, como a biblioteca ou a lista de desejos. */
   fullListLink?: { href: string; label: string };
 }
 
-export function GameShelf({ headingId, title, games, emptyMessage, fullListLink }: GameShelfProps) {
+export function GameShelf({ headingId, title, games, gameCount, isLoading, emptyMessage, fullListLink }: GameShelfProps) {
   return (
     <section aria-labelledby={headingId}>
       <div className="flex flex-wrap items-start justify-between gap-x-4">
-        <SectionHeader headingId={headingId} title={title} description={formatGameCount(games.length)} />
-        {fullListLink && games.length > 0 && (
+        <SectionHeader headingId={headingId} title={title} description={formatGameCount(gameCount)} />
+        {fullListLink && gameCount > 0 && (
           <Link
             href={fullListLink.href}
             className="inline-flex min-h-11 items-center text-medium font-medium text-primary-focus underline underline-offset-4 hover:text-title"
@@ -28,7 +31,11 @@ export function GameShelf({ headingId, title, games, emptyMessage, fullListLink 
           </Link>
         )}
       </div>
-      {games.length === 0 ? (
+      {isLoading ? (
+        <p aria-busy="true" className="text-medium text-subtitle">
+          Carregando jogos...
+        </p>
+      ) : games.length === 0 ? (
         // Estado vazio com um próximo passo, em vez de uma área em branco.
         <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-input p-6">
           <p className="text-medium text-subtitle">{emptyMessage}</p>

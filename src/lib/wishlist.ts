@@ -1,4 +1,3 @@
-import { isGameReleased } from "@/lib/gameAvailability";
 import { getCurrentPriceInCents, isWithinPriceLimit, type PriceLimit } from "@/lib/pricing";
 import { normalizeForSearch } from "@/lib/text";
 import type { GameCollectionEntry } from "@/types/collection";
@@ -19,9 +18,7 @@ export type WishlistSortOrder =
   | "name"
   | "lowest-price"
   | "biggest-discount"
-  | "recently-added"
-  | "newest-release"
-  | "best-reviews";
+  | "recently-added";
 
 export const WISHLIST_SORT_OPTIONS: { value: WishlistSortOrder; label: string }[] = [
   { value: "custom", label: "Posição personalizada" },
@@ -29,21 +26,17 @@ export const WISHLIST_SORT_OPTIONS: { value: WishlistSortOrder; label: string }[
   { value: "lowest-price", label: "Menor preço" },
   { value: "biggest-discount", label: "Maior desconto" },
   { value: "recently-added", label: "Adicionados recentemente" },
-  { value: "newest-release", label: "Lançamento mais recente" },
-  { value: "best-reviews", label: "Melhores análises" },
 ];
 
 export interface WishlistFilters {
   searchTerm: string;
   onlyDiscounted: boolean;
-  onlyReleased: boolean;
   priceLimit: PriceLimit;
 }
 
 export const DEFAULT_WISHLIST_FILTERS: WishlistFilters = {
   searchTerm: "",
   onlyDiscounted: false,
-  onlyReleased: false,
   priceLimit: "any",
 };
 
@@ -73,24 +66,18 @@ function matchesSearchTerm(game: GameListing, searchTerm: string): boolean {
   return searchableTexts.some((text) => normalizeForSearch(text).includes(normalizedSearchTerm));
 }
 
-export function filterWishlistItems(
-  items: WishlistItem[],
-  filters: WishlistFilters,
-  referenceDate: Date = new Date(),
-): WishlistItem[] {
+export function filterWishlistItems(items: WishlistItem[], filters: WishlistFilters): WishlistItem[] {
   return items.filter(
     ({ game }) =>
       matchesSearchTerm(game, filters.searchTerm) &&
       (!filters.onlyDiscounted || game.discountPercent > 0) &&
-      (!filters.onlyReleased || isGameReleased(game, referenceDate)) &&
       isWithinPriceLimit(game, filters.priceLimit),
   );
 }
 
 /** Quantos filtros do painel estão ligados. A busca fica de fora, porque tem o próprio campo. */
 export function countActiveFilters(filters: WishlistFilters): number {
-  return [filters.onlyDiscounted, filters.onlyReleased, filters.priceLimit !== "any"].filter(Boolean)
-    .length;
+  return [filters.onlyDiscounted, filters.priceLimit !== "any"].filter(Boolean).length;
 }
 
 export function hasActiveSearchOrFilters(filters: WishlistFilters): boolean {
@@ -101,22 +88,15 @@ type WishlistComparator = (firstItem: WishlistItem, secondItem: WishlistItem) =>
 
 const titleCollator = new Intl.Collator("pt-BR");
 
-// Jogos sem análises (ainda não lançados) recebem -1 e vão para o fim.
-function getPositivePercent(item: WishlistItem): number {
-  return item.game.reviewSummary?.positivePercent ?? -1;
-}
-
 const WISHLIST_COMPARATORS: Record<WishlistSortOrder, WishlistComparator> = {
   custom: (firstItem, secondItem) => firstItem.position - secondItem.position,
   name: (firstItem, secondItem) => titleCollator.compare(firstItem.game.title, secondItem.game.title),
+  // Jogo sem preço vale "infinito" e vai para o fim; dois sem preço empatam.
   "lowest-price": (firstItem, secondItem) =>
-    getCurrentPriceInCents(firstItem.game) - getCurrentPriceInCents(secondItem.game),
+    getCurrentPriceInCents(firstItem.game) - getCurrentPriceInCents(secondItem.game) || 0,
   "biggest-discount": (firstItem, secondItem) =>
     secondItem.game.discountPercent - firstItem.game.discountPercent,
   "recently-added": (firstItem, secondItem) => secondItem.addedAt.localeCompare(firstItem.addedAt),
-  "newest-release": (firstItem, secondItem) =>
-    secondItem.game.releaseDate.localeCompare(firstItem.game.releaseDate),
-  "best-reviews": (firstItem, secondItem) => getPositivePercent(secondItem) - getPositivePercent(firstItem),
 };
 
 // Nos empates vale a posição personalizada, para a ordem nunca ficar aleatória.

@@ -2,10 +2,10 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 
-import type { StoredGameCollection } from "@/data/storedGameCollection";
+import type { GameCollection } from "@/services/userCollections";
 
-export function useGameCollection(collection: StoredGameCollection) {
-  const entries = useSyncExternalStore(
+export function useGameCollection(collection: GameCollection) {
+  const { status, entries } = useSyncExternalStore(
     collection.subscribe,
     collection.getSnapshot,
     collection.getServerSnapshot,
@@ -15,11 +15,13 @@ export function useGameCollection(collection: StoredGameCollection) {
   const gameIds = useMemo(() => entries.map((entry) => entry.gameId), [entries]);
 
   return {
+    status,
     entries,
     gameIds,
     hasGame: (gameId: string) => gameIds.includes(gameId),
     addGame: collection.add,
     removeGame: collection.remove,
     moveGame: collection.move,
+    reload: collection.reload,
   };
 }

@@ -49,7 +49,6 @@ export function WishlistToolbar({
     firstFilterRef.current?.focus();
     updateFilters({
       onlyDiscounted: DEFAULT_WISHLIST_FILTERS.onlyDiscounted,
-      onlyReleased: DEFAULT_WISHLIST_FILTERS.onlyReleased,
       priceLimit: DEFAULT_WISHLIST_FILTERS.priceLimit,
     });
   }
@@ -121,15 +120,6 @@ export function WishlistToolbar({
                 className="size-5 accent-primary"
               />
               Jogos em promoção
-            </label>
-            <label className={CHECKBOX_LABEL_CLASS}>
-              <input
-                type="checkbox"
-                checked={filters.onlyReleased}
-                onChange={(event) => updateFilters({ onlyReleased: event.target.checked })}
-                className="size-5 accent-primary"
-              />
-              Jogos já lançados
             </label>
           </fieldset>
 
