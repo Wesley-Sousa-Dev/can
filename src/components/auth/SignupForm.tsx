@@ -11,8 +11,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { TextField } from "@/components/forms/TextField";
 import { useValidatedForm } from "@/hooks/useValidatedForm";
 import {
-  EMAIL_TAKEN_MESSAGE,
-  NICKNAME_TAKEN_MESSAGE,
+  describeServerFieldErrors,
   validateAddress,
   validateBirthDate,
   validateEmail,
@@ -31,6 +30,9 @@ const FIELD_IDS = {
   email: "signup-email",
   password: "signup-password",
 };
+
+type SignupFieldName = keyof typeof FIELD_IDS;
+const FIELD_NAMES = Object.keys(FIELD_IDS) as SignupFieldName[];
 
 interface FieldGroupProps {
   legend: string;
@@ -69,8 +71,12 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
     },
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Falha que não pertence a um campo, como o servidor fora do ar.
+  const [formError, setFormError] = useState<string | null>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
-  const summaryItems = buildErrorSummaryItems(errors, FIELD_IDS);
+  const summaryItems = formError
+    ? [{ fieldId: FIELD_IDS.fullName, message: formError }]
+    : buildErrorSummaryItems(errors, FIELD_IDS);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,7 +84,10 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
       return;
     }
 
-    const foundErrors = flushSync(() => validateAllFields());
+    const foundErrors = flushSync(() => {
+      setFormError(null);
+      return validateAllFields();
+    });
     if (Object.keys(foundErrors).length > 0) {
       errorSummaryRef.current?.focus();
       return;
@@ -92,14 +101,12 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
     }
 
     // Apelido ou e-mail repetido só é descoberto no servidor: o erro volta para o campo certo.
+    const serverFieldErrors = describeServerFieldErrors(result.status, result.fieldErrors, FIELD_NAMES);
+    const fieldErrorEntries = Object.entries(serverFieldErrors) as [SignupFieldName, string][];
     flushSync(() => {
       setIsSubmitting(false);
-      if (result.errorCode === "nickname-taken") {
-        setFieldError("nickname", NICKNAME_TAKEN_MESSAGE);
-      }
-      if (result.errorCode === "email-taken") {
-        setFieldError("email", EMAIL_TAKEN_MESSAGE);
-      }
+      fieldErrorEntries.forEach(([fieldName, message]) => setFieldError(fieldName, message));
+      setFormError(fieldErrorEntries.length > 0 ? null : result.message);
     });
     errorSummaryRef.current?.focus();
   }
@@ -115,7 +122,9 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
         <ErrorSummary
           ref={errorSummaryRef}
           title={
-            summaryItems.length === 1
+            formError
+              ? "Não foi possível criar a conta"
+              : summaryItems.length === 1
               ? "Corrija 1 campo para criar a conta"
               : `Corrija ${summaryItems.length} campos para criar a conta`
           }

@@ -10,8 +10,7 @@ import { TextField } from "@/components/forms/TextField";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useValidatedForm } from "@/hooks/useValidatedForm";
 import {
-  EMAIL_TAKEN_MESSAGE,
-  NICKNAME_TAKEN_MESSAGE,
+  describeServerFieldErrors,
   validateAddress,
   validateEmail,
   validateFullName,
@@ -29,6 +28,9 @@ const FIELD_IDS = {
   email: "profile-email",
   address: "profile-address",
 };
+
+type EditableFieldName = keyof typeof FIELD_IDS;
+const EDITABLE_FIELD_NAMES = Object.keys(FIELD_IDS) as EditableFieldName[];
 
 interface AccountDetailsProps {
   user: UserProfile;
@@ -72,8 +74,12 @@ function EditAccountForm({ user, onCancel, onSaved }: EditAccountFormProps) {
     },
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Falha que não pertence a um campo, como o servidor fora do ar.
+  const [formError, setFormError] = useState<string | null>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
-  const summaryItems = buildErrorSummaryItems(errors, FIELD_IDS);
+  const summaryItems = formError
+    ? [{ fieldId: FIELD_IDS.fullName, message: formError }]
+    : buildErrorSummaryItems(errors, FIELD_IDS);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +87,10 @@ function EditAccountForm({ user, onCancel, onSaved }: EditAccountFormProps) {
       return;
     }
 
-    const foundErrors = flushSync(() => validateAllFields());
+    const foundErrors = flushSync(() => {
+      setFormError(null);
+      return validateAllFields();
+    });
     if (Object.keys(foundErrors).length > 0) {
       errorSummaryRef.current?.focus();
       return;
@@ -94,21 +103,23 @@ function EditAccountForm({ user, onCancel, onSaved }: EditAccountFormProps) {
       return;
     }
 
+    const serverFieldErrors = describeServerFieldErrors(result.status, result.fieldErrors, EDITABLE_FIELD_NAMES);
+    const fieldErrorEntries = Object.entries(serverFieldErrors) as [EditableFieldName, string][];
     flushSync(() => {
       setIsSubmitting(false);
-      if (result.errorCode === "nickname-taken") {
-        setFieldError("nickname", NICKNAME_TAKEN_MESSAGE);
-      }
-      if (result.errorCode === "email-taken") {
-        setFieldError("email", EMAIL_TAKEN_MESSAGE);
-      }
+      fieldErrorEntries.forEach(([fieldName, message]) => setFieldError(fieldName, message));
+      setFormError(fieldErrorEntries.length > 0 ? null : result.message);
     });
     errorSummaryRef.current?.focus();
   }
 
   return (
     <form noValidate onSubmit={handleSubmit} aria-labelledby={HEADING_ID} className="flex flex-col gap-4">
-      <ErrorSummary ref={errorSummaryRef} title="Corrija os campos abaixo para salvar" items={summaryItems} />
+      <ErrorSummary
+        ref={errorSummaryRef}
+        title={formError ? "Não foi possível salvar" : "Corrija os campos abaixo para salvar"}
+        items={summaryItems}
+      />
       <TextField id={FIELD_IDS.fullName} label="Nome completo" autoComplete="name" {...registerField("fullName")} />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField

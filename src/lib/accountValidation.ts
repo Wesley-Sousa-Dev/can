@@ -92,13 +92,35 @@ export function validateNewPassword(password: string): string | null {
   return null;
 }
 
-export function validateLoginIdentifier(identifier: string): string | null {
-  return identifier.trim() ? null : "Informe seu apelido ou e-mail.";
-}
-
 export function validateLoginPassword(password: string): string | null {
   return password ? null : "Informe sua senha.";
 }
 
 export const NICKNAME_TAKEN_MESSAGE = "Este apelido já está em uso. Escolha outro.";
 export const EMAIL_TAKEN_MESSAGE = "Já existe uma conta com este e-mail. Entre com ele ou use outro.";
+
+/**
+ * Erros que só a API descobre, prontos para cada campo do formulário. Apelido
+ * e e-mail repetidos (409) usam o texto da Can, que diz como resolver.
+ */
+export function describeServerFieldErrors<TFieldName extends string>(
+  status: number,
+  fieldErrors: Partial<Record<string, string>>,
+  fieldNames: readonly TFieldName[],
+): Partial<Record<TFieldName, string>> {
+  const messages: Partial<Record<TFieldName, string>> = {};
+  for (const fieldName of fieldNames) {
+    const serverMessage = fieldErrors[fieldName];
+    if (!serverMessage) {
+      continue;
+    }
+    if (status === 409 && fieldName === "nickname") {
+      messages[fieldName] = NICKNAME_TAKEN_MESSAGE;
+    } else if (status === 409 && fieldName === "email") {
+      messages[fieldName] = EMAIL_TAKEN_MESSAGE;
+    } else {
+      messages[fieldName] = serverMessage;
+    }
+  }
+  return messages;
+}

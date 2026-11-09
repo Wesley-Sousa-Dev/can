@@ -11,17 +11,16 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { TextField } from "@/components/forms/TextField";
 import { useSession } from "@/hooks/useSession";
 import { useValidatedForm } from "@/hooks/useValidatedForm";
-import { validateLoginIdentifier, validateLoginPassword } from "@/lib/accountValidation";
+import { validateEmail, validateLoginPassword } from "@/lib/accountValidation";
 import { withRedirect } from "@/lib/safeRedirect";
 import { signIn } from "@/services/authService";
 
 const FIELD_IDS = {
-  identifier: "login-identifier",
+  email: "login-email",
   password: "login-password",
 };
 
-const INVALID_CREDENTIALS_MESSAGE =
-  "Apelido, e-mail ou senha incorretos. Confira os dados e tente de novo.";
+const INVALID_CREDENTIALS_MESSAGE = "E-mail ou senha incorretos. Confira os dados e tente de novo.";
 
 interface LoginFormProps {
   /** Página para onde a pessoa volta depois de entrar. Sem ela, vai para o perfil. */
@@ -32,8 +31,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
   const session = useSession();
   const { values, errors, registerField, validateAllFields } = useValidatedForm(
-    { identifier: "", password: "" },
-    { identifier: validateLoginIdentifier, password: validateLoginPassword },
+    { email: "", password: "" },
+    { email: validateEmail, password: validateLoginPassword },
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
 
   // O erro de credenciais não pertence a um campo só, então aparece sozinho no resumo.
   const summaryItems = signInError
-    ? [{ fieldId: FIELD_IDS.identifier, message: signInError }]
+    ? [{ fieldId: FIELD_IDS.email, message: signInError }]
     : buildErrorSummaryItems(errors, FIELD_IDS);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -61,7 +60,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     }
 
     setIsSubmitting(true);
-    const result = await signIn(values.identifier, values.password);
+    const result = await signIn(values.email, values.password);
     if (result.isSuccess) {
       router.push(redirectTo ?? "/profile");
       return;
@@ -69,7 +68,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
 
     flushSync(() => {
       setIsSubmitting(false);
-      setSignInError(INVALID_CREDENTIALS_MESSAGE);
+      // 401: e-mail ou senha errados. Outro código: o servidor explica o que houve.
+      setSignInError(result.status === 401 ? INVALID_CREDENTIALS_MESSAGE : result.message);
     });
     errorSummaryRef.current?.focus();
   }
@@ -98,13 +98,15 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         />
         <p className="text-small text-subtitle">Campos com * são obrigatórios.</p>
         <TextField
-          id={FIELD_IDS.identifier}
-          label="Apelido ou e-mail"
-          autoComplete="username"
+          id={FIELD_IDS.email}
+          label="E-mail"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="Ex.: maria_gamer"
-          {...registerField("identifier")}
+          placeholder="Ex.: maria@email.com"
+          {...registerField("email")}
         />
         <PasswordField
           id={FIELD_IDS.password}
@@ -122,11 +124,6 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         </Link>
       </p>
 
-      {/* Atalho para quem for avaliar o projeto testar sem precisar se cadastrar. */}
-      <p className="mt-4 rounded-md border border-border p-3 text-small text-subtitle">
-        Para testar, use o apelido <strong className="font-medium text-title">demo</strong> e a
-        senha <strong className="font-medium text-title">Can12345</strong>.
-      </p>
     </div>
   );
 }
